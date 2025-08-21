@@ -3,9 +3,9 @@ const PROJECT_ID =
 const REGION = PropertiesService.getScriptProperties().getProperty("REGION");
 const CLIENT_EMAIL =
   PropertiesService.getScriptProperties().getProperty("CLIENT_EMAIL");
-const PRIVETE_KEY =
+const PRIVATE_KEY =
   PropertiesService.getScriptProperties().getProperty("PRIVATE_KEY");
-const PERSED_PRIVETE_KEY = PRIVETE_KEY.replace(/\\n/g, "\n");
+const PARSED_PRIVATE_KEY = PRIVATE_KEY.replace(/\n/g, "\n");
 const GEMINI_MODEL =
   PropertiesService.getScriptProperties().getProperty("GEMINI_MODEL");
 
@@ -31,7 +31,7 @@ function getAccessToken() {
     Utilities.base64EncodeWebSafe(JSON.stringify(payload));
   const signature = Utilities.computeRsaSha256Signature(
     signatureInput,
-    PERSED_PRIVETE_KEY
+    PARSED_PRIVATE_KEY
   );
 
   const jwt = signatureInput + "." + Utilities.base64EncodeWebSafe(signature);
