@@ -157,27 +157,12 @@ function generateSlideFromJson(slideDataJson) {
   Logger.log('generateSlideFromJson: 開始');
   try {
     // JSON文字列をパース
-    const parsed = typeof slideDataJson === 'string'
-      ? JSON.parse(slideDataJson)
+    const slideData = typeof slideDataJson === 'string' 
+      ? JSON.parse(slideDataJson) 
       : slideDataJson;
-
-    // 互換: 配列 or { slideData, patternPlan }
-    const hasContainer = parsed && !Array.isArray(parsed) && parsed.slideData;
-    let patternPlan = hasContainer ? (parsed.patternPlan || null) : null;
-    let slideData = hasContainer ? parsed.slideData : parsed;
-
+    
     if (!Array.isArray(slideData)) {
       throw new Error('slideDataが配列ではありません。');
-    }
-
-    // パターン計画があれば、ここで微調整のフック（現時点ではロギングのみ）
-    if (patternPlan) {
-      try {
-        Logger.log('patternPlan 受領: ' + JSON.stringify(patternPlan));
-        slideData = applyPatternPlanAdjustments(slideData, patternPlan);
-      } catch (e) {
-        Logger.log('patternPlan適用時の警告: ' + e.message);
-      }
     }
     
     Logger.log(`generateSlideFromJson: スライドデータ解析完了 - ${slideData.length}枚のスライド`);
@@ -189,19 +174,6 @@ function generateSlideFromJson(slideDataJson) {
     Logger.log(`Stack: ${error.stack}`);
     throw error;
   }
-}
-
-/**
- * patternPlan を元に slideData を微調整するフック。
- * 既定では非破壊（将来の拡張用）。
- * @param {Array<Object>} slideData
- * @param {Object} patternPlan
- * @returns {Array<Object>} 調整後のslideData
- */
-function applyPatternPlanAdjustments(slideData, patternPlan) {
-  // 例: セクションごとの preferredPatterns をログし、将来的に制約適用を行う。
-  // 現段階ではスルーしてそのまま返す。
-  return slideData;
 }
 
 /**
