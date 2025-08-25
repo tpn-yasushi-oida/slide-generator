@@ -101,9 +101,12 @@ function generateSlideDataWithGemini(userPrompt) {
     // 優先: Vertex AI を利用
     if (PROJECT_ID && CLIENT_EMAIL && PRIVATE_KEY) {
       try {
-        const slideData = callGeminiVertexAI(fullPrompt, responseSchema);
-        Logger.log(`slideData生成完了: ${slideData.length}枚のスライド`);
-        return slideData;
+        const data = callGeminiVertexAI(fullPrompt, responseSchema);
+        const slideCount = Array.isArray(data)
+          ? data.length
+          : (data && Array.isArray(data.slideData) ? data.slideData.length : 0);
+        Logger.log(`slideData生成完了: ${slideCount}枚のスライド`);
+        return data;
       } catch (vertexError) {
         Logger.log(`Vertex AI呼び出しに失敗: ${vertexError.message}`);
         Logger.log("代替手段: generativelanguage.googleapis.com を試します。");
@@ -112,9 +115,12 @@ function generateSlideDataWithGemini(userPrompt) {
 
     // 代替手段: generativelanguage.googleapis.com
     if (GEMINI_API_KEY) {
-      const slideData = callGeminiDirectAPI(fullPrompt, responseSchema);
-      Logger.log(`slideData生成完了: ${slideData.length}枚のスライド`);
-      return slideData;
+      const data = callGeminiDirectAPI(fullPrompt, responseSchema);
+      const slideCount = Array.isArray(data)
+        ? data.length
+        : (data && Array.isArray(data.slideData) ? data.slideData.length : 0);
+      Logger.log(`slideData生成完了: ${slideCount}枚のスライド`);
+      return data;
     }
 
     throw new Error("Gemini APIを呼び出すための認証情報が設定されていません。");
@@ -272,10 +278,9 @@ function callGeminiDirectAPI(userPrompt, responseSchema) {
  * @returns {Object} スライドデータスキーマ
  */
 function getSlideDataSchema() {
-  return {
-    type: "ARRAY",
-    items: {
-      oneOf: [
+  // 定義: スライドアイテムの oneOf スキーマ
+  const slideItemSchema = {
+    oneOf: [
         // title スライド
         {
           type: "OBJECT",
@@ -533,8 +538,81 @@ function getSlideDataSchema() {
           },
           required: ["type"],
         },
-      ],
-    },
+      ]
+  };
+
+  // 互換性のため、ルートは ARRAY (従来) または { patternPlan, slideData } の OBJECT を許可
+  return {
+    oneOf: [
+      // 従来: 直接スライド配列
+      {
+        type: "ARRAY",
+        items: slideItemSchema,
+      },
+      // 拡張: パターン計画 + スライド配列
+      {
+        type: "OBJECT",
+        properties: {
+          patternPlan: {
+            type: "OBJECT",
+            properties: {
+              global: {
+                type: "ARRAY",
+                items: {
+                  type: "STRING",
+                  enum: [
+                    "title",
+                    "section",
+                    "content",
+                    "compare",
+                    "process",
+                    "timeline",
+                    "diagram",
+                    "cards",
+                    "table",
+                    "progress",
+                    "closing",
+                  ],
+                },
+              },
+              sections: {
+                type: "ARRAY",
+                items: {
+                  type: "OBJECT",
+                  properties: {
+                    sectionTitle: { type: "STRING" },
+                    sectionIndex: { type: "NUMBER" },
+                    preferredPatterns: {
+                      type: "ARRAY",
+                      items: {
+                        type: "STRING",
+                        enum: [
+                          "content",
+                          "compare",
+                          "process",
+                          "timeline",
+                          "diagram",
+                          "cards",
+                          "table",
+                          "progress",
+                        ],
+                      },
+                    },
+                  },
+                  required: [],
+                },
+              },
+            },
+            required: [],
+          },
+          slideData: {
+            type: "ARRAY",
+            items: slideItemSchema,
+          },
+        },
+        required: ["slideData"],
+      },
+    ],
   };
 }
 
@@ -550,6 +628,8 @@ function getGeminiPrompt() {
 あなたは、ユーザーから与えられた非構造テキスト情報を解析し、**slideData** という名の JavaScript オブジェクト配列を**生成**することだけに特化した、超高精度データサイエンティスト兼プレゼンテーション設計 AI です。
 
 あなたの**絶対的かつ唯一の使命**は、ユーザーの入力内容から論理的なプレゼンテーション構造を抽出し、各セクションに最適な「表現パターン（Pattern）」を選定し、さらに各スライドで話すべき発表原稿（スピーカーノート）のドラフトまで含んだ、完璧でエラーのない JavaScript オブジェクト配列をJSON形式で生成することです。
+
+出力形式（厳守）: 推奨は { patternPlan, slideData } のJSON。互換モードとして slideData 配列のみも許容します。前後の説明・マークダウンは禁止です。
 
 **slideData の生成以外のタスクを一切実行してはなりません。** あなたの思考と出力のすべては、最高の slideData を生成するためだけに費やされます。
 
