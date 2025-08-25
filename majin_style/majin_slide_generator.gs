@@ -154,6 +154,7 @@ const CONFIG = {
  * @returns {string} 生成されたプレゼンテーションのURL
  */
 function generateSlideFromJson(slideDataJson) {
+  Logger.log('generateSlideFromJson: 開始');
   try {
     // JSON文字列をパース
     const slideData = typeof slideDataJson === 'string' 
@@ -164,9 +165,50 @@ function generateSlideFromJson(slideDataJson) {
       throw new Error('slideDataが配列ではありません。');
     }
     
-    return generatePresentationFromData(slideData);
+    Logger.log(`generateSlideFromJson: スライドデータ解析完了 - ${slideData.length}枚のスライド`);
+    const result = generatePresentationFromData(slideData);
+    Logger.log(`generateSlideFromJson: 完了 - URL: ${result}`);
+    return result;
   } catch (error) {
-    Logger.log(`JSONの解析エラー: ${error.message}`);
+    Logger.log(`generateSlideFromJson: エラー - ${error.message}`);
+    Logger.log(`Stack: ${error.stack}`);
+    throw error;
+  }
+}
+
+/**
+ * テスト用の簡単なスライド生成関数
+ * エラーの原因を特定するために使用
+ */
+function testSlideGeneration() {
+  Logger.log('testSlideGeneration: テスト開始');
+  try {
+    const testData = [
+      { 
+        type: 'title', 
+        title: 'テストプレゼンテーション', 
+        date: '2024.01.01',
+        notes: 'これはテスト用のタイトルスライドです。'
+      },
+      { 
+        type: 'content', 
+        title: 'テストコンテンツ',
+        points: ['テスト項目1', 'テスト項目2', 'テスト項目3'],
+        notes: 'これはテスト用のコンテンツスライドです。'
+      },
+      { 
+        type: 'closing',
+        notes: 'これはテスト用のクロージングスライドです。'
+      }
+    ];
+    
+    Logger.log('testSlideGeneration: テストデータ準備完了');
+    const url = generatePresentationFromData(testData);
+    Logger.log(`testSlideGeneration: 成功 - URL: ${url}`);
+    return url;
+  } catch (error) {
+    Logger.log(`testSlideGeneration: エラー - ${error.message}`);
+    Logger.log(`Stack: ${error.stack}`);
     throw error;
   }
 }
@@ -193,24 +235,42 @@ function generatePresentationFromData(slideData) {
     const layout = createLayoutManager(presentation.getPageWidth(), presentation.getPageHeight());
     
     let pageCounter = 0;
-    for (const data of slideData) {
+    for (let i = 0; i < slideData.length; i++) {
+      const data = slideData[i];
+      Logger.log(`スライド生成開始: ${i + 1}/${slideData.length} - タイプ: ${data.type}, タイトル: ${data.title || 'N/A'}`);
+      
       const generator = slideGenerators[data.type];
       if (data.type !== 'title' && data.type !== 'closing') pageCounter++;
+      
       if (generator) {
-        const slide = presentation.appendSlide(SlidesApp.PredefinedLayout.BLANK);
-        generator(slide, data, layout, pageCounter);
-        
-        // ノート（スピーカーノート）の追加
-        if (data.notes) {
-          try {
-            const notesShape = slide.getNotesPage().getSpeakerNotesShape();
-            if (notesShape) {
-              notesShape.getText().setText(data.notes);
+        try {
+          const slide = presentation.appendSlide(SlidesApp.PredefinedLayout.BLANK);
+          Logger.log(`スライド作成完了: ${i + 1} - 生成関数実行中...`);
+          
+          generator(slide, data, layout, pageCounter);
+          Logger.log(`スライド生成成功: ${i + 1} - タイプ: ${data.type}`);
+          
+          // ノート（スピーカーノート）の追加
+          if (data.notes) {
+            try {
+              const notesShape = slide.getNotesPage().getSpeakerNotesShape();
+              if (notesShape) {
+                notesShape.getText().setText(data.notes);
+                Logger.log(`ノート追加成功: ${i + 1}`);
+              }
+            } catch (e) {
+              Logger.log(`ノート追加失敗: ${i + 1} - ${e.message}`);
             }
-          } catch (e) {
-            Logger.log(`ノートの追加に失敗しました: ${e.message}`);
           }
+        } catch (e) {
+          Logger.log(`スライド生成エラー: ${i + 1} - タイプ: ${data.type}`);
+          Logger.log(`エラー詳細: ${e.message}`);
+          Logger.log(`スタック: ${e.stack}`);
+          Logger.log(`データ: ${JSON.stringify(data, null, 2)}`);
+          throw new Error(`スライド ${i + 1} (タイプ: ${data.type}) の生成に失敗しました: ${e.message}`);
         }
+      } else {
+        Logger.log(`警告: 未対応のスライドタイプです - ${data.type}`);
       }
     }
     
@@ -240,49 +300,122 @@ const slideGenerators = {
 
 // --- 6. 各スライドの生成関数 ---
 function createTitleSlide(slide, data, layout) {
-  slide.getBackground().setSolidFill(CONFIG.COLORS.background_white);
-  
-  const logoRect = layout.getRect('titleSlide.logo');
-  const logo = slide.insertImage(CONFIG.LOGOS.header);
-  const aspect = logo.getHeight() / logo.getWidth();
-  logo.setLeft(logoRect.left).setTop(logoRect.top).setWidth(logoRect.width).setHeight(logoRect.width * aspect);
-  
-  const titleRect = layout.getRect('titleSlide.title');
-  const titleShape = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, titleRect.left, titleRect.top, titleRect.width, titleRect.height);
-  setStyledText(titleShape, data.title, { size: CONFIG.FONTS.sizes.title, bold: true });
-  
-  const dateRect = layout.getRect('titleSlide.date');
-  const dateShape = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, dateRect.left, dateRect.top, dateRect.width, dateRect.height);
-  dateShape.getText().setText(data.date || '');
-  applyTextStyle(dateShape.getText(), { size: CONFIG.FONTS.sizes.date });
-  
-  drawBottomBar(slide, layout);
+  Logger.log('createTitleSlide: 開始');
+  try {
+    slide.getBackground().setSolidFill(CONFIG.COLORS.background_white);
+    
+    // ロゴの挿入
+    try {
+      const logoRect = layout.getRect('titleSlide.logo');
+      const logo = slide.insertImage(CONFIG.LOGOS.header);
+      const aspect = logo.getHeight() / logo.getWidth();
+      logo.setLeft(logoRect.left).setTop(logoRect.top).setWidth(logoRect.width).setHeight(logoRect.width * aspect);
+      Logger.log('createTitleSlide: ロゴ挿入成功');
+    } catch (e) {
+      Logger.log(`createTitleSlide: ロゴ挿入エラー - ${e.message}`);
+    }
+    
+    // タイトルの設定
+    try {
+      const titleRect = layout.getRect('titleSlide.title');
+      const titleShape = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, titleRect.left, titleRect.top, titleRect.width, titleRect.height);
+      setStyledText(titleShape, data.title, { size: CONFIG.FONTS.sizes.title, bold: true });
+      Logger.log('createTitleSlide: タイトル設定成功');
+    } catch (e) {
+      Logger.log(`createTitleSlide: タイトル設定エラー - ${e.message}`);
+    }
+    
+    // 日付の設定
+    try {
+      const dateRect = layout.getRect('titleSlide.date');
+      const dateShape = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, dateRect.left, dateRect.top, dateRect.width, dateRect.height);
+      if (!safeSetText(dateShape, data.date || '', 'タイトルスライド-日付')) {
+        // フォールバック: 直接設定を試す
+        const textRange = safeGetText(dateShape, 'タイトルスライド-日付-フォールバック');
+        if (textRange) {
+          applyTextStyle(textRange, { size: CONFIG.FONTS.sizes.date });
+        }
+      } else {
+        const textRange = safeGetText(dateShape, 'タイトルスライド-日付-スタイル適用');
+        if (textRange) {
+          applyTextStyle(textRange, { size: CONFIG.FONTS.sizes.date });
+        }
+      }
+      Logger.log('createTitleSlide: 日付設定成功');
+    } catch (e) {
+      Logger.log(`createTitleSlide: 日付設定エラー - ${e.message}`);
+    }
+    
+    drawBottomBar(slide, layout);
+    Logger.log('createTitleSlide: 完了');
+  } catch (e) {
+    Logger.log(`createTitleSlide: 全体エラー - ${e.message}`);
+    Logger.log(`Stack: ${e.stack}`);
+    throw e;
+  }
 }
 
 function createSectionSlide(slide, data, layout, pageNum) {
-  slide.getBackground().setSolidFill(CONFIG.COLORS.background_gray);
-  
-  // 優先順: sectionNo > タイトルから抽出 > 自動採番
-  __SECTION_COUNTER++;
-  const parsedNum = (() => {
-    if (Number.isFinite(data.sectionNo)) return Number(data.sectionNo);
-    const m = String(data.title || '').match(/^\s*(\d+)[\[\.]/); // Changed to match [ or . after digits
-    return m ? Number(m[1]) : __SECTION_COUNTER;
-  })();
-  const num = String(parsedNum).padStart(2, '0');
-  
-  const ghostRect = layout.getRect('sectionSlide.ghostNum');
-  const ghost = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, ghostRect.left, ghostRect.top, ghostRect.width, ghostRect.height);
-  ghost.getText().setText(num);
-  applyTextStyle(ghost.getText(), { size: CONFIG.FONTS.sizes.ghostNum, color: CONFIG.COLORS.ghost_gray, bold: true });
-  try { ghost.setContentAlignment(SlidesApp.ContentAlignment.MIDDLE); } catch(e) {}
-  
-  const titleRect = layout.getRect('sectionSlide.title');
-  const titleShape = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, titleRect.left, titleRect.top, titleRect.width, titleRect.height);
-  titleShape.setContentAlignment(SlidesApp.ContentAlignment.MIDDLE);
-  setStyledText(titleShape, data.title, { size: CONFIG.FONTS.sizes.sectionTitle, bold: true, align: SlidesApp.ParagraphAlignment.CENTER });
-  
-  addGoogleFooter(slide, layout, pageNum);
+  Logger.log('createSectionSlide: 開始');
+  try {
+    slide.getBackground().setSolidFill(CONFIG.COLORS.background_gray);
+    
+    // セクション番号の決定
+    __SECTION_COUNTER++;
+    const parsedNum = (() => {
+      if (Number.isFinite(data.sectionNo)) return Number(data.sectionNo);
+      const m = String(data.title || '').match(/^\s*(\d+)[\.．]/); // Match periods (ASCII and full-width) after digits
+      return m ? Number(m[1]) : __SECTION_COUNTER;
+    })();
+    const num = String(parsedNum).padStart(2, '0');
+    Logger.log(`createSectionSlide: セクション番号決定 - ${num}`);
+    
+    // ゴースト番号の設定
+    try {
+      const ghostRect = layout.getRect('sectionSlide.ghostNum');
+      const ghost = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, ghostRect.left, ghostRect.top, ghostRect.width, ghostRect.height);
+      
+      if (!safeSetText(ghost, num, 'セクションスライド-ゴースト番号')) {
+        Logger.log('createSectionSlide: ゴースト番号の直接設定を試行');
+      }
+      
+      const textRange = safeGetText(ghost, 'セクションスライド-ゴースト番号-スタイル適用');
+      if (textRange) {
+        applyTextStyle(textRange, { size: CONFIG.FONTS.sizes.ghostNum, color: CONFIG.COLORS.ghost_gray, bold: true });
+      }
+      
+      try { 
+        ghost.setContentAlignment(SlidesApp.ContentAlignment.MIDDLE); 
+      } catch(e) {
+        Logger.log(`createSectionSlide: コンテンツ整列エラー - ${e.message}`);
+      }
+      Logger.log('createSectionSlide: ゴースト番号設定成功');
+    } catch (e) {
+      Logger.log(`createSectionSlide: ゴースト番号設定エラー - ${e.message}`);
+    }
+    
+    // タイトルの設定
+    try {
+      const titleRect = layout.getRect('sectionSlide.title');
+      const titleShape = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, titleRect.left, titleRect.top, titleRect.width, titleRect.height);
+      try {
+        titleShape.setContentAlignment(SlidesApp.ContentAlignment.MIDDLE);
+      } catch(e) {
+        Logger.log(`createSectionSlide: タイトル整列エラー - ${e.message}`);
+      }
+      setStyledText(titleShape, data.title, { size: CONFIG.FONTS.sizes.sectionTitle, bold: true, align: SlidesApp.ParagraphAlignment.CENTER });
+      Logger.log('createSectionSlide: タイトル設定成功');
+    } catch (e) {
+      Logger.log(`createSectionSlide: タイトル設定エラー - ${e.message}`);
+    }
+    
+    addGoogleFooter(slide, layout, pageNum);
+    Logger.log('createSectionSlide: 完了');
+  } catch (e) {
+    Logger.log(`createSectionSlide: 全体エラー - ${e.message}`);
+    Logger.log(`Stack: ${e.stack}`);
+    throw e;
+  }
 }
 
 // content 1/2 カラム + 箇条書き + 画像
@@ -367,36 +500,72 @@ function drawCompareBox(slide, rect, title, items) {
 
 // process 縦型プロセス
 function createProcessSlide(slide, data, layout, pageNum) {
-  slide.getBackground().setSolidFill(CONFIG.COLORS.background_white);
-  drawStandardTitleHeader(slide, layout, 'processSlide', data.title);
-  const dy = drawSubheadIfAny(slide, layout, 'processSlide', data.subhead);
-  
-  const area = offsetRect(layout.getRect('processSlide.area'), 0, dy);
-  const steps = Array.isArray(data.steps) ? data.steps : [];
-  const n = Math.max(1, steps.length);
-  const gapY = (area.height - layout.pxToPt(40)) / Math.max(1, n - 1);
-  const cx = area.left + layout.pxToPt(44);
-  const top0 = area.top + layout.pxToPt(10);
-  
-  const line = slide.insertShape(SlidesApp.ShapeType.RECTANGLE, cx - layout.pxToPt(1), top0 + layout.pxToPt(6), layout.pxToPt(2), gapY * (n - 1));
-  line.getFill().setSolidFill(CONFIG.COLORS.faint_gray); line.getBorder().setTransparent();
-  
-  for (let i = 0; i < n; i++) {
-    const cy = top0 + gapY * i;
-    const sz = layout.pxToPt(28);
-    const numBox = slide.insertShape(SlidesApp.ShapeType.RECTANGLE, cx - sz/2, cy - sz/2, sz, sz);
-    numBox.getFill().setSolidFill(CONFIG.COLORS.background_white);
-    numBox.getBorder().getLineFill().setSolidFill(CONFIG.COLORS.primary_blue);
-    numBox.getBorder().setWeight(1);
-    const num = numBox.getText(); num.setText(String(i + 1));
-    applyTextStyle(num, { size: 12, bold: true, color: CONFIG.COLORS.primary_blue, align: SlidesApp.ParagraphAlignment.CENTER });
+  Logger.log('createProcessSlide: 開始');
+  try {
+    slide.getBackground().setSolidFill(CONFIG.COLORS.background_white);
+    drawStandardTitleHeader(slide, layout, 'processSlide', data.title);
+    const dy = drawSubheadIfAny(slide, layout, 'processSlide', data.subhead);
     
-    const txt = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, cx + layout.pxToPt(28), cy - layout.pxToPt(16), area.width - layout.pxToPt(70), layout.pxToPt(32));
-    setStyledText(txt, steps[i] || '', { size: CONFIG.FONTS.sizes.processStep });
-    try { txt.setContentAlignment(SlidesApp.ContentAlignment.MIDDLE); } catch(e){}
+    const area = offsetRect(layout.getRect('processSlide.area'), 0, dy);
+    const steps = Array.isArray(data.steps) ? data.steps : [];
+    const n = Math.max(1, steps.length);
+    Logger.log(`createProcessSlide: ステップ数 - ${n}`);
+    
+    const gapY = (area.height - layout.pxToPt(40)) / Math.max(1, n - 1);
+    const cx = area.left + layout.pxToPt(44);
+    const top0 = area.top + layout.pxToPt(10);
+    
+    const line = slide.insertShape(SlidesApp.ShapeType.RECTANGLE, cx - layout.pxToPt(1), top0 + layout.pxToPt(6), layout.pxToPt(2), gapY * (n - 1));
+    line.getFill().setSolidFill(CONFIG.COLORS.faint_gray); line.getBorder().setTransparent();
+    
+    for (let i = 0; i < n; i++) {
+      Logger.log(`createProcessSlide: ステップ ${i + 1} 作成中`);
+      try {
+        const cy = top0 + gapY * i;
+        const sz = layout.pxToPt(28);
+        const numBox = slide.insertShape(SlidesApp.ShapeType.RECTANGLE, cx - sz/2, cy - sz/2, sz, sz);
+        numBox.getFill().setSolidFill(CONFIG.COLORS.background_white);
+        numBox.getBorder().getLineFill().setSolidFill(CONFIG.COLORS.primary_blue);
+        numBox.getBorder().setWeight(1);
+        
+        // 番号ボックスのテキスト設定（エラーが起きやすい箇所）
+        if (!safeSetText(numBox, String(i + 1), `プロセススライド-番号ボックス-${i + 1}`)) {
+          Logger.log(`createProcessSlide: 番号ボックス ${i + 1} のテキスト設定に失敗、直接設定を試行`);
+          try {
+            const num = numBox.getText(); 
+            num.setText(String(i + 1));
+          } catch (e) {
+            Logger.log(`createProcessSlide: 番号ボックス ${i + 1} の直接設定も失敗 - ${e.message}`);
+          }
+        }
+        
+        const textRange = safeGetText(numBox, `プロセススライド-番号ボックススタイル-${i + 1}`);
+        if (textRange) {
+          applyTextStyle(textRange, { size: 12, bold: true, color: CONFIG.COLORS.primary_blue, align: SlidesApp.ParagraphAlignment.CENTER });
+        }
+        
+        // テキストボックスの作成
+        const txt = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, cx + layout.pxToPt(28), cy - layout.pxToPt(16), area.width - layout.pxToPt(70), layout.pxToPt(32));
+        setStyledText(txt, steps[i] || '', { size: CONFIG.FONTS.sizes.processStep });
+        try { txt.setContentAlignment(SlidesApp.ContentAlignment.MIDDLE); } catch(e){
+          Logger.log(`createProcessSlide: テキスト整列エラー ${i + 1} - ${e.message}`);
+        }
+        
+        Logger.log(`createProcessSlide: ステップ ${i + 1} 完了`);
+      } catch (e) {
+        Logger.log(`createProcessSlide: ステップ ${i + 1} でエラー - ${e.message}`);
+        Logger.log(`Stack: ${e.stack}`);
+        throw e;
+      }
+    }
+    
+    drawBottomBarAndFooter(slide, layout, pageNum);
+    Logger.log('createProcessSlide: 完了');
+  } catch (e) {
+    Logger.log(`createProcessSlide: 全体エラー - ${e.message}`);
+    Logger.log(`Stack: ${e.stack}`);
+    throw e;
   }
-  
-  drawBottomBarAndFooter(slide, layout, pageNum);
 }
 
 // timeline 横型タイムライン
@@ -422,20 +591,53 @@ function createTimelineSlide(slide, data, layout, pageNum) {
   const gap = (rightX - leftX) / Math.max(1, (milestones.length - 1));
   
   milestones.forEach((m, i) => {
-    const x = leftX + gap * i - dotR / 2;
-    const dot = slide.insertShape(SlidesApp.ShapeType.ELLIPSE, x, baseY - dotR / 2, dotR, dotR);
-    const state = (m.state || 'todo').toLowerCase();
-    if (state === 'done') { dot.getFill().setSolidFill(CONFIG.COLORS.google_green); dot.getBorder().setTransparent(); }
-    else if (state === 'next') { dot.getFill().setSolidFill(CONFIG.COLORS.background_white); dot.getBorder().getLineFill().setSolidFill(CONFIG.COLORS.google_yellow); dot.getBorder().setWeight(2); }
-    else { dot.getFill().setSolidFill(CONFIG.COLORS.background_white); dot.getBorder().getLineFill().setSolidFill(CONFIG.COLORS.neutral_gray); dot.getBorder().setWeight(1); }
-    
-    const t = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, x - layout.pxToPt(40), baseY - layout.pxToPt(40), layout.pxToPt(90), layout.pxToPt(20));
-    t.getText().setText(String(m.label || ''));
-    applyTextStyle(t.getText(), { size: CONFIG.FONTS.sizes.small, bold: true, align: SlidesApp.ParagraphAlignment.CENTER });
-    
-    const d = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, x - layout.pxToPt(40), baseY + layout.pxToPt(8), layout.pxToPt(90), layout.pxToPt(18));
-    d.getText().setText(String(m.date || ''));
-    applyTextStyle(d.getText(), { size: CONFIG.FONTS.sizes.small, color: CONFIG.COLORS.neutral_gray, align: SlidesApp.ParagraphAlignment.CENTER });
+    Logger.log(`createTimelineSlide: マイルストーン ${i + 1} 作成中`);
+    try {
+      const x = leftX + gap * i - dotR / 2;
+      const dot = slide.insertShape(SlidesApp.ShapeType.ELLIPSE, x, baseY - dotR / 2, dotR, dotR);
+      const state = (m.state || 'todo').toLowerCase();
+      if (state === 'done') { dot.getFill().setSolidFill(CONFIG.COLORS.google_green); dot.getBorder().setTransparent(); }
+      else if (state === 'next') { dot.getFill().setSolidFill(CONFIG.COLORS.background_white); dot.getBorder().getLineFill().setSolidFill(CONFIG.COLORS.google_yellow); dot.getBorder().setWeight(2); }
+      else { dot.getFill().setSolidFill(CONFIG.COLORS.background_white); dot.getBorder().getLineFill().setSolidFill(CONFIG.COLORS.neutral_gray); dot.getBorder().setWeight(1); }
+      
+      // ラベルテキストの設定（エラーが起きやすい箇所）
+      const t = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, x - layout.pxToPt(40), baseY - layout.pxToPt(40), layout.pxToPt(90), layout.pxToPt(20));
+      if (!safeSetText(t, String(m.label || ''), `タイムライン-ラベル-${i + 1}`)) {
+        Logger.log(`createTimelineSlide: ラベル ${i + 1} のテキスト設定に失敗、直接設定を試行`);
+        try {
+          t.getText().setText(String(m.label || ''));
+        } catch (e) {
+          Logger.log(`createTimelineSlide: ラベル ${i + 1} の直接設定も失敗 - ${e.message}`);
+        }
+      }
+      
+      const labelRange = safeGetText(t, `タイムライン-ラベルスタイル-${i + 1}`);
+      if (labelRange) {
+        applyTextStyle(labelRange, { size: CONFIG.FONTS.sizes.small, bold: true, align: SlidesApp.ParagraphAlignment.CENTER });
+      }
+      
+      // 日付テキストの設定（エラーが起きやすい箇所）
+      const d = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, x - layout.pxToPt(40), baseY + layout.pxToPt(8), layout.pxToPt(90), layout.pxToPt(18));
+      if (!safeSetText(d, String(m.date || ''), `タイムライン-日付-${i + 1}`)) {
+        Logger.log(`createTimelineSlide: 日付 ${i + 1} のテキスト設定に失敗、直接設定を試行`);
+        try {
+          d.getText().setText(String(m.date || ''));
+        } catch (e) {
+          Logger.log(`createTimelineSlide: 日付 ${i + 1} の直接設定も失敗 - ${e.message}`);
+        }
+      }
+      
+      const dateRange = safeGetText(d, `タイムライン-日付スタイル-${i + 1}`);
+      if (dateRange) {
+        applyTextStyle(dateRange, { size: CONFIG.FONTS.sizes.small, color: CONFIG.COLORS.neutral_gray, align: SlidesApp.ParagraphAlignment.CENTER });
+      }
+      
+      Logger.log(`createTimelineSlide: マイルストーン ${i + 1} 完了`);
+    } catch (e) {
+      Logger.log(`createTimelineSlide: マイルストーン ${i + 1} でエラー - ${e.message}`);
+      Logger.log(`Stack: ${e.stack}`);
+      throw e;
+    }
   });
   
   drawBottomBarAndFooter(slide, layout, pageNum);
@@ -475,8 +677,20 @@ function createDiagramSlide(slide, data, layout, pageNum) {
     lt.getFill().setSolidFill(CONFIG.COLORS.lane_title_bg);
     lt.getBorder().getLineFill().setSolidFill(CONFIG.COLORS.lane_border);
     lt.getBorder().setWeight(1);
-    lt.getText().setText(lane.title || '');
-    applyTextStyle(lt.getText(), { size: CONFIG.FONTS.sizes.laneTitle, bold: true, align: SlidesApp.ParagraphAlignment.CENTER });
+    // レーンタイトルの設定（エラーが起きやすい箇所）
+    if (!safeSetText(lt, lane.title || '', `ダイアグラム-レーンタイトル-${j + 1}`)) {
+      Logger.log(`createDiagramSlide: レーンタイトル ${j + 1} のテキスト設定に失敗、直接設定を試行`);
+      try {
+        lt.getText().setText(lane.title || '');
+      } catch (e) {
+        Logger.log(`createDiagramSlide: レーンタイトル ${j + 1} の直接設定も失敗 - ${e.message}`);
+      }
+    }
+    
+    const ltRange = safeGetText(lt, `ダイアグラム-レーンタイトルスタイル-${j + 1}`);
+    if (ltRange) {
+      applyTextStyle(ltRange, { size: CONFIG.FONTS.sizes.laneTitle, bold: true, align: SlidesApp.ParagraphAlignment.CENTER });
+    }
     
     const items = Array.isArray(lane.items) ? lane.items : [];
     const availH = area.height - laneTitleH - lanePad * 2;
@@ -549,7 +763,14 @@ function createCardsSlide(slide, data, layout, pageNum) {
       const combined = `${title}${desc ? '\n' + desc : ''}`;
       setStyledText(card, combined, { size: CONFIG.FONTS.sizes.body });
       if (title.length > 0) {
-        try { card.getText().getRange(0, title.length).getTextStyle().setBold(true); } catch(e){}
+        try { 
+          const cardRange = safeGetText(card, `カード-タイトル範囲-${idx + 1}`);
+          if (cardRange) {
+            cardRange.getRange(0, title.length).getTextStyle().setBold(true);
+          }
+        } catch(e){
+          Logger.log(`createCardsSlide: カード ${idx + 1} のタイトルスタイル適用失敗 - ${e.message}`);
+        }
       }
     }
     try { card.setContentAlignment(SlidesApp.ContentAlignment.MIDDLE); } catch(e) {}
@@ -638,8 +859,21 @@ function createProgressSlide(slide, data, layout, pageNum) {
     barFG.getFill().setSolidFill(CONFIG.COLORS.google_green); barFG.getBorder().setTransparent();
     
     const pct = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, barLeft + barW + layout.pxToPt(6), y - layout.pxToPt(1), layout.pxToPt(40), layout.pxToPt(16));
-    pct.getText().setText(String(p) + '%');
-    applyTextStyle(pct.getText(), { size: CONFIG.FONTS.sizes.small, color: CONFIG.COLORS.neutral_gray });
+    
+    // パーセンテージテキストの設定（エラーが起きやすい箇所）
+    if (!safeSetText(pct, String(p) + '%', `プログレス-パーセント-${i + 1}`)) {
+      Logger.log(`createProgressSlide: パーセント ${i + 1} のテキスト設定に失敗、直接設定を試行`);
+      try {
+        pct.getText().setText(String(p) + '%');
+      } catch (e) {
+        Logger.log(`createProgressSlide: パーセント ${i + 1} の直接設定も失敗 - ${e.message}`);
+      }
+    }
+    
+    const pctRange = safeGetText(pct, `プログレス-パーセントスタイル-${i + 1}`);
+    if (pctRange) {
+      applyTextStyle(pctRange, { size: CONFIG.FONTS.sizes.small, color: CONFIG.COLORS.neutral_gray });
+    }
   }
   
   drawBottomBarAndFooter(slide, layout, pageNum);
@@ -655,6 +889,50 @@ function createClosingSlide(slide, data, layout) {
 }
 
 // --- 7. ヘルパー関数 ---
+
+// 安全にテキストを設定するためのヘルパー関数
+function safeSetText(shape, text, context = 'unknown') {
+  try {
+    if (!shape) {
+      Logger.log(`エラー: ${context} - シェイプがnullまたはundefinedです`);
+      return false;
+    }
+    const textRange = shape.getText();
+    if (!textRange) {
+      Logger.log(`エラー: ${context} - テキスト範囲を取得できませんでした`);
+      return false;
+    }
+    textRange.setText(String(text || ''));
+    Logger.log(`成功: ${context} - テキストを設定しました: "${String(text || '').substring(0, 20)}..."`);
+    return true;
+  } catch (e) {
+    Logger.log(`エラー: ${context} - テキスト設定に失敗しました: ${e.message}`);
+    Logger.log(`Stack: ${e.stack}`);
+    return false;
+  }
+}
+
+// 安全にテキスト範囲を取得するためのヘルパー関数  
+function safeGetText(shape, context = 'unknown') {
+  try {
+    if (!shape) {
+      Logger.log(`エラー: ${context} - シェイプがnullまたはundefinedです`);
+      return null;
+    }
+    const textRange = shape.getText();
+    if (!textRange) {
+      Logger.log(`エラー: ${context} - テキスト範囲を取得できませんでした`);
+      return null;
+    }
+    Logger.log(`成功: ${context} - テキスト範囲を取得しました`);
+    return textRange;
+  } catch (e) {
+    Logger.log(`エラー: ${context} - テキスト範囲取得に失敗しました: ${e.message}`);
+    Logger.log(`Stack: ${e.stack}`);
+    return null;
+  }
+}
+
 function createLayoutManager(pageW_pt, pageH_pt) {
   const pxToPt = (px) => px * 0.75;
   const baseW_pt = pxToPt(CONFIG.BASE_PX.W);
@@ -722,16 +1000,48 @@ function drawBottomBarAndFooter(slide, layout, pageNum) {
 }
 
 function addGoogleFooter(slide, layout, pageNum) {
-  const leftRect = layout.getRect('footer.leftText');
-  const leftShape = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, leftRect.left, leftRect.top, leftRect.width, leftRect.height);
-  leftShape.getText().setText(CONFIG.FOOTER_TEXT);
-  applyTextStyle(leftShape.getText(), { size: CONFIG.FONTS.sizes.footer, color: CONFIG.COLORS.text_primary });
-  
-  if (pageNum > 0) {
-    const rightRect = layout.getRect('footer.rightPage');
-    const rightShape = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, rightRect.left, rightRect.top, rightRect.width, rightRect.height);
-    rightShape.getText().setText(String(pageNum));
-    applyTextStyle(rightShape.getText(), { size: CONFIG.FONTS.sizes.footer, color: CONFIG.COLORS.primary_blue, align: SlidesApp.ParagraphAlignment.END });
+  try {
+    const leftRect = layout.getRect('footer.leftText');
+    const leftShape = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, leftRect.left, leftRect.top, leftRect.width, leftRect.height);
+    
+    // フッターテキストの設定（エラーが起きやすい箇所）
+    if (!safeSetText(leftShape, CONFIG.FOOTER_TEXT, 'フッター-左テキスト')) {
+      Logger.log('addGoogleFooter: 左フッターテキスト設定に失敗、直接設定を試行');
+      try {
+        leftShape.getText().setText(CONFIG.FOOTER_TEXT);
+      } catch (e) {
+        Logger.log(`addGoogleFooter: 左フッターテキスト直接設定も失敗 - ${e.message}`);
+      }
+    }
+    
+    const leftRange = safeGetText(leftShape, 'フッター-左テキストスタイル');
+    if (leftRange) {
+      applyTextStyle(leftRange, { size: CONFIG.FONTS.sizes.footer, color: CONFIG.COLORS.text_primary });
+    }
+    
+    if (pageNum > 0) {
+      const rightRect = layout.getRect('footer.rightPage');
+      const rightShape = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, rightRect.left, rightRect.top, rightRect.width, rightRect.height);
+      
+      // ページ番号の設定（エラーが起きやすい箇所）
+      if (!safeSetText(rightShape, String(pageNum), 'フッター-ページ番号')) {
+        Logger.log('addGoogleFooter: ページ番号設定に失敗、直接設定を試行');
+        try {
+          rightShape.getText().setText(String(pageNum));
+        } catch (e) {
+          Logger.log(`addGoogleFooter: ページ番号直接設定も失敗 - ${e.message}`);
+        }
+      }
+      
+      const rightRange = safeGetText(rightShape, 'フッター-ページ番号スタイル');
+      if (rightRange) {
+        applyTextStyle(rightRange, { size: CONFIG.FONTS.sizes.footer, color: CONFIG.COLORS.primary_blue, align: SlidesApp.ParagraphAlignment.END });
+      }
+    }
+  } catch (e) {
+    Logger.log(`addGoogleFooter: フッター追加エラー - ${e.message}`);
+    Logger.log(`Stack: ${e.stack}`);
+    // フッターエラーはスライド生成を停止させないため、例外を再スローしない
   }
 }
 
