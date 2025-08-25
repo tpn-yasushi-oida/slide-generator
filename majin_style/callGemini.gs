@@ -1,18 +1,28 @@
 /**
  * Gemini APIを呼び出すためのコアスクリプト
- * 構造化データを生成します。
+ * 構造化出力を使用してslideDataを生成します。
  */
 
 // --- 1. スクリプトプロパティ ---
-const PROJECT_ID = PropertiesService.getScriptProperties().getProperty("PROJECT_ID");
-const REGION = PropertiesService.getScriptProperties().getProperty("REGION") || "us-central1";
-const CLIENT_EMAIL = PropertiesService.getScriptProperties().getProperty("CLIENT_EMAIL");
-const PRIVATE_KEY = PropertiesService.getScriptProperties().getProperty("PRIVATE_KEY");
-const PARSED_PRIVATE_KEY = PRIVATE_KEY ? PRIVATE_KEY.replace(/\\n/g, "\n") : null;
-const GEMINI_MODEL = PropertiesService.getScriptProperties().getProperty("GEMINI_MODEL") || "gemini-1.5-flash-latest";
+const PROJECT_ID =
+  PropertiesService.getScriptProperties().getProperty("PROJECT_ID");
+const REGION =
+  PropertiesService.getScriptProperties().getProperty("REGION") ||
+  "us-central1";
+const CLIENT_EMAIL =
+  PropertiesService.getScriptProperties().getProperty("CLIENT_EMAIL");
+const PRIVATE_KEY =
+  PropertiesService.getScriptProperties().getProperty("PRIVATE_KEY");
+const PARSED_PRIVATE_KEY = PRIVATE_KEY
+  ? PRIVATE_KEY.replace(/\\n/g, "\n")
+  : null;
+const GEMINI_MODEL =
+  PropertiesService.getScriptProperties().getProperty("GEMINI_MODEL") ||
+  "gemini-1.5-flash-latest";
 
 // 代替手段(API KEYで generativelanguage.googleapis.com を利用)
-const GEMINI_API_KEY = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
+const GEMINI_API_KEY =
+  PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
 
 /**
  * OAuth 2.0 アクセストークンを取得 (Vertex AI用)
@@ -43,7 +53,7 @@ function getAccessToken() {
       Utilities.base64EncodeWebSafe(JSON.stringify(header)) +
       "." +
       Utilities.base64EncodeWebSafe(JSON.stringify(payload));
-    
+
     const signature = Utilities.computeRsaSha256Signature(
       signatureInput,
       PARSED_PRIVATE_KEY
@@ -78,15 +88,22 @@ function getAccessToken() {
 /**
  * Gemini APIを呼び出し、構造化されたslideDataを生成
  * @param {string} userPrompt - ユーザーが入力したプロンプト
- * @param {Object} responseSchema - 期待するレスポンスのスキーマ
  * @returns {Object} 生成されたslideDataのJSON
  */
-function generateSlideDataWithGemini(userPrompt, responseSchema) {
+function generateSlideDataWithGemini(userPrompt) {
   try {
+    Logger.log("Gemini APIでslideData生成開始");
+
+    // プロンプト作成
+    const fullPrompt = getGeminiPrompt() + "\n\n" + userPrompt;
+    const responseSchema = getSlideDataSchema();
+
     // 優先: Vertex AI を利用
     if (PROJECT_ID && CLIENT_EMAIL && PRIVATE_KEY) {
       try {
-        return callGeminiVertexAI(userPrompt, responseSchema);
+        const slideData = callGeminiVertexAI(fullPrompt, responseSchema);
+        Logger.log(`slideData生成完了: ${slideData.length}枚のスライド`);
+        return slideData;
       } catch (vertexError) {
         Logger.log(`Vertex AI呼び出しに失敗: ${vertexError.message}`);
         Logger.log("代替手段: generativelanguage.googleapis.com を試します。");
@@ -95,11 +112,12 @@ function generateSlideDataWithGemini(userPrompt, responseSchema) {
 
     // 代替手段: generativelanguage.googleapis.com
     if (GEMINI_API_KEY) {
-      return callGeminiDirectAPI(userPrompt, responseSchema);
+      const slideData = callGeminiDirectAPI(fullPrompt, responseSchema);
+      Logger.log(`slideData生成完了: ${slideData.length}枚のスライド`);
+      return slideData;
     }
 
     throw new Error("Gemini APIを呼び出すための認証情報が設定されていません。");
-
   } catch (error) {
     Logger.log(`Gemini API呼び出しエラー: ${error.message}`);
     throw error;
@@ -118,19 +136,23 @@ function callGeminiVertexAI(userPrompt, responseSchema) {
     const endpoint = `https://${REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/publishers/google/models/${GEMINI_MODEL}:generateContent`;
 
     const requestBody = {
-      contents: [{
-        role: "user",
-        parts: [{
-          text: userPrompt
-        }]
-      }],
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: userPrompt,
+            },
+          ],
+        },
+      ],
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: responseSchema,
         temperature: 0.7,
         topP: 0.9,
-        topK: 40
-      }
+        topK: 40,
+      },
     };
 
     const response = UrlFetchApp.fetch(endpoint, {
@@ -143,11 +165,13 @@ function callGeminiVertexAI(userPrompt, responseSchema) {
     });
 
     if (response.getResponseCode() !== 200) {
-      throw new Error(`Vertex AI API エラー: ${response.getResponseCode()} - ${response.getContentText()}`);
+      throw new Error(
+        `Vertex AI API エラー: ${response.getResponseCode()} - ${response.getContentText()}`
+      );
     }
 
     const responseData = JSON.parse(response.getContentText());
-    
+
     if (!responseData.candidates || !responseData.candidates[0]) {
       throw new Error("Vertex AI からの応答に候補が含まれていません。");
     }
@@ -159,10 +183,11 @@ function callGeminiVertexAI(userPrompt, responseSchema) {
 
     const slideDataJson = content.parts[0].text;
     const slideData = JSON.parse(slideDataJson);
-    
-    Logger.log(`Vertex AI経由でslideDataを生成しました: ${slideData.length}件のスライド`);
-    return slideData;
 
+    Logger.log(
+      `Vertex AI経由でslideDataを生成しました: ${slideData.length}件のスライド`
+    );
+    return slideData;
   } catch (error) {
     Logger.log(`Vertex AI呼び出しエラー: ${error.message}`);
     throw error;
@@ -184,35 +209,41 @@ function callGeminiDirectAPI(userPrompt, responseSchema) {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
     const requestBody = {
-      contents: [{
-        parts: [{
-          text: userPrompt
-        }]
-      }],
+      contents: [
+        {
+          parts: [
+            {
+              text: userPrompt,
+            },
+          ],
+        },
+      ],
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: responseSchema,
         temperature: 0.7,
         topP: 0.9,
-        topK: 40
-      }
+        topK: 40,
+      },
     };
 
     const response = UrlFetchApp.fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-goog-api-key": GEMINI_API_KEY
+        "x-goog-api-key": GEMINI_API_KEY,
       },
-      payload: JSON.stringify(requestBody)
+      payload: JSON.stringify(requestBody),
     });
 
     if (response.getResponseCode() !== 200) {
-      throw new Error(`Direct API エラー: ${response.getResponseCode()} - ${response.getContentText()}`);
+      throw new Error(
+        `Direct API エラー: ${response.getResponseCode()} - ${response.getContentText()}`
+      );
     }
 
     const responseData = JSON.parse(response.getContentText());
-    
+
     if (!responseData.candidates || !responseData.candidates[0]) {
       throw new Error("Direct API からの応答に候補が含まれていません。");
     }
@@ -224,10 +255,11 @@ function callGeminiDirectAPI(userPrompt, responseSchema) {
 
     const slideDataJson = content.parts[0].text;
     const slideData = JSON.parse(slideDataJson);
-    
-    Logger.log(`Direct API経由でslideDataを生成しました: ${slideData.length}件のスライド`);
-    return slideData;
 
+    Logger.log(
+      `Direct API経由でslideDataを生成しました: ${slideData.length}件のスライド`
+    );
+    return slideData;
   } catch (error) {
     Logger.log(`Direct API呼び出しエラー: ${error.message}`);
     throw error;
@@ -235,123 +267,274 @@ function callGeminiDirectAPI(userPrompt, responseSchema) {
 }
 
 /**
- * slideDataのスキーマを定義し、構造化を強制
+ * スライドタイプ別の厳密なスキーマを定義し、構造化を強制
+ * oneOf構造でcontentスライドのpoints配列を必須化
  * @returns {Object} スライドデータスキーマ
  */
 function getSlideDataSchema() {
   return {
     type: "ARRAY",
     items: {
-      type: "OBJECT",
-      properties: {
-        type: {
-          type: "STRING",
-          enum: ["title", "section", "content", "compare", "process", "timeline", "diagram", "cards", "table", "progress", "closing"]
+      oneOf: [
+        // title スライド
+        {
+          type: "OBJECT",
+          properties: {
+            type: { type: "STRING", enum: ["title"] },
+            title: { type: "STRING" },
+            date: { type: "STRING" },
+            notes: { type: "STRING" },
+          },
+          required: ["type", "title"],
         },
-        title: { type: "STRING" },
-        date: { type: "STRING" },
-        sectionNo: { type: "NUMBER" },
-        subhead: { type: "STRING" },
-        points: {
-          type: "ARRAY",
-          items: { type: "STRING" }
+        // section スライド
+        {
+          type: "OBJECT",
+          properties: {
+            type: { type: "STRING", enum: ["section"] },
+            title: { type: "STRING" },
+            sectionNo: { type: "NUMBER" },
+            notes: { type: "STRING" },
+          },
+          required: ["type", "title"],
         },
-        twoColumn: { type: "BOOLEAN" },
-        columns: {
-          type: "ARRAY",
-          items: {
-            type: "ARRAY",
-            items: { type: "STRING" }
-          }
-        },
-        images: {
-          type: "ARRAY",
-          items: {
-            oneOf: [
-              { type: "STRING" },
-              {
-                type: "OBJECT",
-                properties: {
-                  url: { type: "STRING" },
-                  caption: { type: "STRING" }
-                }
-              }
-            ]
-          }
-        },
-        leftTitle: { type: "STRING" },
-        rightTitle: { type: "STRING" },
-        leftItems: {
-          type: "ARRAY",
-          items: { type: "STRING" }
-        },
-        rightItems: {
-          type: "ARRAY",
-          items: { type: "STRING" }
-        },
-        steps: {
-          type: "ARRAY",
-          items: { type: "STRING" }
-        },
-        milestones: {
-          type: "ARRAY",
-          items: {
-            type: "OBJECT",
-            properties: {
-              label: { type: "STRING" },
-              date: { type: "STRING" },
-              state: {
-                type: "STRING",
-                enum: ["done", "next", "todo"]
-              }
-            }
-          }
-        },
-        lanes: {
-          type: "ARRAY",
-          items: {
-            type: "OBJECT",
-            properties: {
-              title: { type: "STRING" },
+        // content スライド
+        {
+          type: "OBJECT",
+          properties: {
+            type: { type: "STRING", enum: ["content"] },
+            title: { type: "STRING" },
+            subhead: { type: "STRING" },
+            points: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+              minItems: 3,
+              maxItems: 7,
+            },
+            twoColumn: { type: "BOOLEAN" },
+            columns: {
+              type: "ARRAY",
               items: {
                 type: "ARRAY",
-                items: { type: "STRING" }
-              }
-            }
-          }
+                items: { type: "STRING" },
+              },
+            },
+            images: {
+              type: "ARRAY",
+              items: {
+                oneOf: [
+                  { type: "STRING" },
+                  {
+                    type: "OBJECT",
+                    properties: {
+                      url: { type: "STRING" },
+                      caption: { type: "STRING" },
+                    },
+                  },
+                ],
+              },
+            },
+            notes: { type: "STRING" },
+          },
+          required: ["type", "title", "points"],
         },
-        items: {
-          type: "ARRAY",
-          items: {
-            oneOf: [
-              { type: "STRING" },
-              {
+        // compare スライド
+        {
+          type: "OBJECT",
+          properties: {
+            type: { type: "STRING", enum: ["compare"] },
+            title: { type: "STRING" },
+            subhead: { type: "STRING" },
+            leftTitle: { type: "STRING" },
+            rightTitle: { type: "STRING" },
+            leftItems: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+            },
+            rightItems: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+            },
+            images: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+            },
+            notes: { type: "STRING" },
+          },
+          required: [
+            "type",
+            "title",
+            "leftTitle",
+            "rightTitle",
+            "leftItems",
+            "rightItems",
+          ],
+        },
+        // process スライド
+        {
+          type: "OBJECT",
+          properties: {
+            type: { type: "STRING", enum: ["process"] },
+            title: { type: "STRING" },
+            subhead: { type: "STRING" },
+            steps: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+            },
+            images: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+            },
+            notes: { type: "STRING" },
+          },
+          required: ["type", "title", "steps"],
+        },
+        // timeline スライド
+        {
+          type: "OBJECT",
+          properties: {
+            type: { type: "STRING", enum: ["timeline"] },
+            title: { type: "STRING" },
+            subhead: { type: "STRING" },
+            milestones: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  label: { type: "STRING" },
+                  date: { type: "STRING" },
+                  state: {
+                    type: "STRING",
+                    enum: ["done", "next", "todo"],
+                  },
+                },
+                required: ["label", "date"],
+              },
+            },
+            images: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+            },
+            notes: { type: "STRING" },
+          },
+          required: ["type", "title", "milestones"],
+        },
+        // diagram スライド
+        {
+          type: "OBJECT",
+          properties: {
+            type: { type: "STRING", enum: ["diagram"] },
+            title: { type: "STRING" },
+            subhead: { type: "STRING" },
+            lanes: {
+              type: "ARRAY",
+              items: {
                 type: "OBJECT",
                 properties: {
                   title: { type: "STRING" },
-                  desc: { type: "STRING" },
+                  items: {
+                    type: "ARRAY",
+                    items: { type: "STRING" },
+                  },
+                },
+                required: ["title", "items"],
+              },
+            },
+            images: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+            },
+            notes: { type: "STRING" },
+          },
+          required: ["type", "title", "lanes"],
+        },
+        // cards スライド
+        {
+          type: "OBJECT",
+          properties: {
+            type: { type: "STRING", enum: ["cards"] },
+            title: { type: "STRING" },
+            subhead: { type: "STRING" },
+            columns: { type: "STRING", enum: ["2", "3"] },
+            items: {
+              type: "ARRAY",
+              items: {
+                oneOf: [
+                  { type: "STRING" },
+                  {
+                    type: "OBJECT",
+                    properties: {
+                      title: { type: "STRING" },
+                      desc: { type: "STRING" },
+                    },
+                    required: ["title"],
+                  },
+                ],
+              },
+            },
+            images: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+            },
+            notes: { type: "STRING" },
+          },
+          required: ["type", "title", "items"],
+        },
+        // table スライド
+        {
+          type: "OBJECT",
+          properties: {
+            type: { type: "STRING", enum: ["table"] },
+            title: { type: "STRING" },
+            subhead: { type: "STRING" },
+            headers: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+            },
+            rows: {
+              type: "ARRAY",
+              items: {
+                type: "ARRAY",
+                items: { type: "STRING" },
+              },
+            },
+            notes: { type: "STRING" },
+          },
+          required: ["type", "title", "headers", "rows"],
+        },
+        // progress スライド
+        {
+          type: "OBJECT",
+          properties: {
+            type: { type: "STRING", enum: ["progress"] },
+            title: { type: "STRING" },
+            subhead: { type: "STRING" },
+            items: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
                   label: { type: "STRING" },
-                  percent: { type: "NUMBER" }
-                }
-              }
-            ]
-          }
+                  percent: { type: "NUMBER" },
+                },
+                required: ["label", "percent"],
+              },
+            },
+            notes: { type: "STRING" },
+          },
+          required: ["type", "title", "items"],
         },
-        headers: {
-          type: "ARRAY",
-          items: { type: "STRING" }
+        // closing スライド
+        {
+          type: "OBJECT",
+          properties: {
+            type: { type: "STRING", enum: ["closing"] },
+            notes: { type: "STRING" },
+          },
+          required: ["type"],
         },
-        rows: {
-          type: "ARRAY",
-          items: {
-            type: "ARRAY",
-            items: { type: "STRING" }
-          }
-        },
-        notes: { type: "STRING" }
-      },
-      required: ["type"]
-    }
+      ],
+    },
   };
 }
 
@@ -362,13 +545,13 @@ function getSlideDataSchema() {
 function getGeminiPrompt() {
   return `# Gemini、あなたはプレゼンテーション生成の専門家です
 
-## **1.0 PRIMARY_OBJECTIVE (主要目的)**
+## **1.0 PRIMARY_OBJECTIVE — 最終目標**
 
-あなたの主な任務は、ユーザーからの多様な入力（キーワード、文章、断片的なアイデアなど）を解釈し、**slideData** という厳格に定義された JavaScript オブジェクト配列の **JSON形式で生成**することです。このプロセスを通じて、思考を構造化し、視覚的に魅力的で論理的なプレゼンテーションを自動生成する、強力な AI アシスタントとして機能してください。
+あなたは、ユーザーから与えられた非構造テキスト情報を解析し、**slideData** という名の JavaScript オブジェクト配列を**生成**することだけに特化した、超高精度データサイエンティスト兼プレゼンテーション設計 AI です。
 
-あなたは単なる **データ変換器ではありません。** ユーザーの意図を深く理解し、創造性を発揮して、最適なスライド構成、コンテンツ、レイアウト（**スライドタイプ**）を提案してください。最終的に、あなたの生成する **slideData JSON** が、美しく、分かりやすいプレゼンテーションへと変換されることを常に意識してください。
+あなたの**絶対的かつ唯一の使命**は、ユーザーの入力内容から論理的なプレゼンテーション構造を抽出し、各セクションに最適な「表現パターン（Pattern）」を選定し、さらに各スライドで話すべき発表原稿（スピーカーノート）のドラフトまで含んだ、完璧でエラーのない JavaScript オブジェクト配列をJSON形式で生成することです。
 
-**slideData のJSON生成スキーマを逸脱することは絶対に許可されません。** あなたは常に、定義された slideData JSONのルールに従って、出力を生成する必要があります。
+**slideData の生成以外のタスクを一切実行してはなりません。** あなたの思考と出力のすべては、最高の slideData を生成するためだけに費やされます。
 
 ## **2.0 GENERATION_WORKFLOW (思考と生成のフロー)**
 
@@ -379,6 +562,7 @@ function getGeminiPrompt() {
 2. **ステップ 2: スライドタイプとコンテンツの決定**  
    - 各要素に最も適した**スライドタイプ**を選択します。例えば、比較には compare、時系列には timeline を使います。  
    - キーメッセージを効果的に伝えるための**コンテンツ**（箇条書き、説明文など）を生成します。
+   - **重要**: contentスライドには必ず**points配列**を含めてください。これは箇条書きを表示するために必須です。
 
 3. **ステップ 3: スライドタイプの割り当て**  
    - 全体の構成を考慮し、各スライドに **Google スライドデザイン**に基づいた**最適なタイプ**を割り当てます。  
@@ -402,6 +586,7 @@ function getGeminiPrompt() {
      - \`[[色付き太字]]\` は **太字** かつ **Google ブルー** (\`#4285F4\`) になります。  
    - **画像 URL の抽出**: ユーザー入力に \`![...](...png|.jpg|.jpeg|.gif|.webp)\` 形式の画像URLが含まれる場合、それを抽出し、\`images\` プロパティに格納します。メディアの \`caption\` も適切に設定します。  
    - **スピーカーノートの生成**: 各スライドの目的に応じて、発表者が話すべき内容を**スピーカーノート**として\`notes\`プロパティに生成します。
+   - **箇条書きの必須化**: contentスライドでは必ず\`points\`配列を含め、最低3項目の箇条書きを生成してください。
 
 5. **ステップ 5: 品質チェックと最終調整**  
    - **一貫性**:  
@@ -412,6 +597,7 @@ function getGeminiPrompt() {
      - \`notes\` プロパティには、プレゼンターがそのまま読めるような、完成された文章を記述します。  
      - \`title.date\` は \`YYYY.MM.DD\` 形式とします。  
      - **アジェンダの自動生成**: \`アジェンダ\`/\`Agenda\`/\`あじぇんだ\`/\`本日の流れ\` といったタイトルが指定された場合、\`points\` が空であれば、**以降の\`section.title\`を収集してアジェンダを自動生成**してください。その際、最大でも **スライド 3 枚**に収まるように要約・生成します。
+   - **contentスライドの必須チェック**: 全てのcontentスライドに\`points\`配列が含まれていることを確認してください。
 
 6. **ステップ 6: 出力**
    - チェック済みの完成したオブジェクトを**slideData のJSON形式のみ**で出力します。**前後の説明や \`\`\`json ... \`\`\` といったマークダウンは一切不要**です。
@@ -427,7 +613,7 @@ function getGeminiPrompt() {
 - **クロージング**: { type: 'closing', notes?: '...' }
 
 **コンテツスライド (レイアウト指定)**
-- **content (1カラム/2カラム + 画像 + 箇条書き)**: { type: 'content', title: '...', subhead?: string, points?: string[], twoColumn?: boolean, columns?: [string[], string[]], images?: (string | { url: string, caption?: string })[], notes?: '...' }
+- **content (1カラム/2カラム + 画像 + 箇条書き)**: { type: 'content', title: '...', subhead?: string, **points: string[]** (必須), twoColumn?: boolean, columns?: [string[], string[]], images?: (string | { url: string, caption?: string })[], notes?: '...' }
 - **compare (比較)**: { type: 'compare', title: '...', subhead?: string, leftTitle: '...', rightTitle: '...', leftItems: string[], rightItems: string[], images?: string[], notes?: '...' }
 - **process (手順・工程)**: { type: 'process', title: '...', subhead?: string, steps: string[], images?: string[], notes?: '...' }
 - **timeline (時系列)**: { type: 'timeline', title: '...', subhead?: string, milestones: { label: string, date: string, state?: 'done'|'next'|'todo' }[], images?: string[], notes?: '...' }
@@ -440,7 +626,7 @@ function getGeminiPrompt() {
 
 - **構成例**:  
   1. \`title\` (表紙)  
-  2. \`content\` (導入や概要。スライド 2 枚まで)  
+  2. \`content\` (導入や概要。スライド 2 枚まで) - **必ずpoints配列を含む**
   3. \`section\`  
   4. \`content\`/\`compare\`/\`process\`/\`timeline\`/\`diagram\`/\`cards\`/\`table\`/\`progress\` を2～5枚程度  
   5. 以降、3～4を繰り返す  
@@ -451,6 +637,7 @@ function getGeminiPrompt() {
   * \`section.title\`: 最大 30 字  
   * 各スライドの \`title\`: 最大 40 字  
   * **subhead**: 最大 50 字、フォントサイズ 18  
+  * **points配列**: contentスライドでは必須。最低3項目、最大7項目の箇条書きを生成
   * 箇条書きのテキスト: 約 90 字までを**改行**  
   * **notes (スピーカーノート)**: 各スライドで話すべき内容を、150字程度で簡潔に記述します。**ユーザーの入力**と生成した**スライドコンテンツ**の両方を踏まえた、より具体的な内容にしてください。  
   * **句読点**: 「、」や「。」を適切に使用し、読みやすさを担保します。  
@@ -472,13 +659,16 @@ function getGeminiPrompt() {
 - **説明や \`\`\`json ... \`\`\` といったマークダウン、コメント、改行、タブは一切含めないでください。**
 - JSON形式のレスポンスボディのみを出力してください。
 
-## **プロンプト例**
+## **重要な注意事項**
 
-1. **JSONレスポンス**: Gemini APIのレスポンスは、指定されたスキーマに厳密に従ったslideDataのみとします。
-2. **エラー処理**: 不適切な入力や解釈不能なリクエストに対しては、エラーメッセージを返す代わりに、解釈可能な範囲でスライドを生成します。
-3. **形式**: \`slideData = [...]\` の形式ではなく、JSONボディそのものを返します。
-4. **品質**: 生成されたコンテンツは、常に論理的で、誤字脱字がなく、一貫性があること。
-5. **文字数**: 各項目の文字数制限を厳守してください。
+1. **contentスライドには必ずpoints配列を含めること**
+2. **箇条書きが表示されるために、points配列は必須項目です**
+3. **各contentスライドで最低3項目の箇条書きを生成してください**
+4. **JSONレスポンス**: Gemini APIのレスポンスは、指定されたスキーマに厳密に従ったslideDataのみとします。
+5. **エラー処理**: 不適切な入力や解釈不能なリクエストに対しては、エラーメッセージを返す代わりに、解釈可能な範囲でスライドを生成します。
+6. **形式**: \`slideData = [...]\` の形式ではなく、JSONボディそのものを返します。
+7. **品質**: 生成されたコンテンツは、常に論理的で、誤字脱字がなく、一貫性があること。
+8. **文字数**: 各項目の文字数制限を厳守してください。
 `;
 }
 
@@ -495,20 +685,26 @@ function testGeminiConnection() {
     const hasDirectAPI = !!GEMINI_API_KEY;
 
     if (!hasVertexAI && !hasDirectAPI) {
-      Logger.log("エラー: Gemini APIを呼び出すための認証情報が設定されていません。");
+      Logger.log(
+        "エラー: Gemini APIを呼び出すための認証情報が設定されていません。"
+      );
       Logger.log("解決策:");
-      Logger.log("- Vertex AI用: PROJECT_ID, CLIENT_EMAIL, PRIVATE_KEY を設定してください。");
+      Logger.log(
+        "- Vertex AI用: PROJECT_ID, CLIENT_EMAIL, PRIVATE_KEY を設定してください。"
+      );
       Logger.log("- Direct API用: GEMINI_API_KEY を設定してください。");
       return false;
     }
 
-    Logger.log(`接続方法: Vertex AI=${hasVertexAI}, Direct API=${hasDirectAPI}`);
+    Logger.log(
+      `接続方法: Vertex AI=${hasVertexAI}, Direct API=${hasDirectAPI}`
+    );
 
     // 2. テストプロンプトで生成を試行
-    const testPrompt = "Geminiについてのプレゼンテーションを作成してください。スライドは3-5枚程度でお願いします。内容は、Geminiの概要がわかるようにしてください。";
-    const schema = getSlideDataSchema();
+    const testPrompt =
+      "Geminiについてのプレゼンテーションを作成してください。スライドは3-5枚程度でお願いします。内容は、Geminiの概要がわかるようにしてください。";
 
-    const result = generateSlideDataWithGemini(testPrompt, schema);
+    const result = generateSlideDataWithGemini(testPrompt);
 
     if (!Array.isArray(result)) {
       Logger.log("エラー: 生成された結果が配列ではありません。");
@@ -521,12 +717,97 @@ function testGeminiConnection() {
     }
 
     Logger.log(`テスト成功: ${result.length}枚のスライドを生成`);
-    Logger.log("生成されたスライド種別: " + result.map(s => s.type).join(", "));
-    
-    return true;
+    Logger.log(
+      "生成されたスライド種別: " + result.map((s) => s.type).join(", ")
+    );
 
+    return true;
   } catch (error) {
     Logger.log(`テスト失敗: ${error.message}`);
+    return false;
+  }
+}
+
+/**
+ * 修正後のGemini API呼び出しを詳細テスト
+ * slideDataのpoints配列が適切に生成されるかを検証
+ * @returns {boolean} テスト結果
+ */
+function testSlideDataGeneration() {
+  try {
+    Logger.log("=== slideData生成テスト開始 ===");
+
+    const testPrompt =
+      "AIについてのプレゼンテーションを作成してください。AIの概要、メリット、課題、今後の展望について5-7枚のスライドでまとめてください。";
+
+    Logger.log("テストプロンプトでslideData生成を実行中...");
+    const slideData = generateSlideDataWithGemini(testPrompt);
+
+    if (!Array.isArray(slideData)) {
+      Logger.log("エラー: 生成されたデータが配列ではありません");
+      return false;
+    }
+
+    Logger.log(`生成されたスライド数: ${slideData.length}枚`);
+
+    // contentスライドのpoints配列を詳細検証
+    let contentSlideCount = 0;
+    let pointsValidCount = 0;
+
+    slideData.forEach((slide, index) => {
+      Logger.log(
+        `スライド ${index + 1}: タイプ=${slide.type}, タイトル=${
+          slide.title || "N/A"
+        }`
+      );
+
+      if (slide.type === "content") {
+        contentSlideCount++;
+        Logger.log(`  → contentスライド検証中...`);
+
+        if (Array.isArray(slide.points)) {
+          Logger.log(`  → points配列あり: ${slide.points.length}項目`);
+          Logger.log(
+            `  → 内容: ${slide.points.slice(0, 2).join(", ")}${
+              slide.points.length > 2 ? "..." : ""
+            }`
+          );
+
+          if (slide.points.length >= 3) {
+            pointsValidCount++;
+            Logger.log(`  → ✅ points配列が適切 (${slide.points.length}項目)`);
+          } else {
+            Logger.log(
+              `  → ❌ points配列の項目数不足 (${slide.points.length}項目, 最低3項目必要)`
+            );
+          }
+        } else {
+          Logger.log(`  → ❌ points配列が存在しません`);
+        }
+      }
+    });
+
+    Logger.log(`=== 検証結果 ===`);
+    Logger.log(`contentスライド数: ${contentSlideCount}枚`);
+    Logger.log(`points配列が適切なスライド数: ${pointsValidCount}枚`);
+
+    const isSuccess =
+      contentSlideCount > 0 && pointsValidCount === contentSlideCount;
+
+    if (isSuccess) {
+      Logger.log(
+        "✅ テスト成功: 全てのcontentスライドでpoints配列が適切に生成されました"
+      );
+    } else {
+      Logger.log(
+        "❌ テスト失敗: 一部のcontentスライドでpoints配列が不適切です"
+      );
+    }
+
+    return isSuccess;
+  } catch (error) {
+    Logger.log(`テスト実行エラー: ${error.message}`);
+    Logger.log(`Stack: ${error.stack}`);
     return false;
   }
 }
@@ -536,19 +817,31 @@ function testGeminiConnection() {
  */
 function diagnoseSettings() {
   Logger.log("=== 設定診断 ===");
-  
+
   const settings = [
     { key: "PROJECT_ID", value: PROJECT_ID, required: "Vertex AI用" },
     { key: "REGION", value: REGION, required: "Vertex AI用" },
     { key: "CLIENT_EMAIL", value: CLIENT_EMAIL, required: "Vertex AI用" },
-    { key: "PRIVATE_KEY", value: PRIVATE_KEY ? "[設定済み]" : null, required: "Vertex AI用" },
+    {
+      key: "PRIVATE_KEY",
+      value: PRIVATE_KEY ? "[設定済み]" : null,
+      required: "Vertex AI用",
+    },
     { key: "GEMINI_MODEL", value: GEMINI_MODEL, required: "共通" },
-    { key: "GEMINI_API_KEY", value: GEMINI_API_KEY ? "[設定済み]" : null, required: "Direct API用" }
+    {
+      key: "GEMINI_API_KEY",
+      value: GEMINI_API_KEY ? "[設定済み]" : null,
+      required: "Direct API用",
+    },
   ];
 
-  settings.forEach(setting => {
+  settings.forEach((setting) => {
     const status = setting.value ? "✅" : "❌";
-    Logger.log(`${status} ${setting.key}: ${setting.value || "未設定"} (${setting.required})`);
+    Logger.log(
+      `${status} ${setting.key}: ${setting.value || "未設定"} (${
+        setting.required
+      })`
+    );
   });
 
   const hasVertexAI = !!(PROJECT_ID && CLIENT_EMAIL && PRIVATE_KEY);
@@ -559,6 +852,8 @@ function diagnoseSettings() {
   Logger.log(`Direct API: ${hasDirectAPI ? "有効" : "無効"}`);
 
   if (!hasVertexAI && !hasDirectAPI) {
-    Logger.log("\n警告: 有効な接続方法がありません。スクリプトプロパティを設定してください。");
+    Logger.log(
+      "\n警告: 有効な接続方法がありません。スクリプトプロパティを設定してください。"
+    );
   }
 }
