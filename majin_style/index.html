@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>まじん式スライドジェネレーター</title>
+    <title>SlideGenerator2</title>
   </head>
   <link
     rel="stylesheet"
@@ -26,30 +26,22 @@
       font-family: "Helvetica Neue", Arial, sans-serif;
       color: #333;
       padding: 24px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
     }
 
     header {
-      text-align: center;
+      text-align: left;
       margin-bottom: 40px;
-      color: white;
+      margin-left: 0;
     }
 
     header h1 {
       font-family: "Reddit Sans", sans-serif;
-      font-size: 2.2rem;
-      font-weight: 500;
-      letter-spacing: 0.1rem;
-      margin: 0;
-      padding-bottom: 10px;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-    }
-
-    header .subtitle {
-      font-size: 1.1rem;
-      opacity: 0.9;
+      font-size: 1.4rem;
       font-weight: 400;
+      letter-spacing: 0.1rem;
+      color: rgb(127, 127, 127);
+      margin: 0;
+      padding-bottom: 5px;
     }
 
     footer {
@@ -57,37 +49,29 @@
       bottom: 0;
       left: 0;
       width: 100%;
-      height: 35px;
+      height: 35px; /* 固定高さ */
       text-align: center;
       font-size: 0.875rem;
-      color: rgba(255,255,255,0.8);
+      color: #6c757d;
       padding: 0.5rem 0;
       z-index: 10;
-      background: rgba(0,0,0,0.1);
     }
 
     .container {
       max-width: 800px;
       margin: 0 auto;
-      background: rgba(255, 255, 255, 0.95);
-      padding: 40px;
-      border-radius: 20px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-      backdrop-filter: blur(10px);
+      background: #fff;
+      padding: 30px;
     }
-
-    .container h2 {
-      padding: 10px 0 30px 0;
+    .container h1 {
+      padding: 5px 0;
       text-align: center;
-      color: #4a5568;
-      font-size: 1.4rem;
-      font-weight: 400;
     }
 
     form {
       display: flex;
       flex-direction: column;
-      gap: 24px;
+      gap: 18px;
     }
 
     .form-group {
@@ -95,85 +79,58 @@
       flex-direction: column;
     }
 
-    .form-label {
-      font-size: 1rem;
-      font-weight: 500;
-      color: #2d3748;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
     textarea {
       width: 100%;
-      padding: 18px 24px;
-      font-size: 0.95rem;
+      padding: 15px 30px;
+      font-size: 0.9rem;
       outline: none;
-      background: #f8f9fa;
-      transition: all 0.3s ease;
+      background: #f4f4f4;
+      transition: border-color 0.2s;
       color: #333;
-      border: 2px solid #e2e8f0;
+      border: none;
       border-radius: 15px;
-      line-height: 1.6;
-      resize: vertical;
+      line-height: 1.5;
     }
-    
     textarea:focus {
-      border-color: #667eea;
-      background: #ffffff;
-      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      border-color: #333;
     }
-    
     .btn-area {
       text-align: center;
       vertical-align: middle;
-      margin-top: 10px;
     }
 
     .submit-btn {
-      height: 55px;
-      width: 200px;
-      padding: 16px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      height: 50px;
+      width: 180px;
+      padding: 14px;
+      background-color: #111;
       color: #fff;
       border: none;
       border-radius: 15px;
-      font-size: 1.05rem;
+      font-size: 1rem;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: background-color 0.3s, transform 0.1s;
       letter-spacing: 0.5px;
-      margin: 10px 15px;
+      margin: 10px 20px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
-      font-weight: 500;
-      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      gap: 8px;
     }
-    
     .submit-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+      transform: scale(1.05);
     }
-    
     .submit-btn:active {
-      transform: translateY(0);
+      transform: scale(0.98);
     }
-
 
     #link-to-slide {
-      width: 300px;
-      background: linear-gradient(135deg, #ffdd00 0%, #ffa500 100%);
-      color: #333;
+      width: 400px;
+      background-color: #ffdd00;
+      color: #111;
       font-weight: bold;
-      margin-top: 30px;
+      margin-top: 40px;
       display: none;
-      box-shadow: 0 4px 15px rgba(255, 221, 0, 0.4);
-    }
-
-    #link-to-slide:hover {
-      box-shadow: 0 8px 25px rgba(255, 221, 0, 0.6);
     }
 
     /* ローディング */
@@ -183,49 +140,43 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(255, 255, 255, 0.95);
+      background: rgba(255, 255, 255, 0.8); /* 半透明の白 */
       z-index: 1000;
       display: none;
       align-items: center;
       justify-content: center;
-      backdrop-filter: blur(5px);
     }
 
     .loading-content {
       text-align: center;
-      background: white;
-      padding: 40px;
-      border-radius: 20px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
     }
 
     .spinner {
       width: 50px;
       height: 50px;
-      border: 6px solid rgba(102, 126, 234, 0.2);
-      border-top: 6px solid #667eea;
+      border: 6px solid rgba(0, 0, 0, 0.2); /* 薄い枠 */
+      border-top: 6px solid #111; /* 濃い部分 */
       border-radius: 50%;
       animation: spin 1s linear infinite;
-      margin: 0 auto;
+      margin: 0 auto; /* 中央揃え */
     }
 
     #loading p {
-      margin-top: 20px;
-      font-size: 1.1rem;
+      margin-top: 10px;
+      font-size: 1rem;
       color: #333;
-      font-weight: 500;
     }
 
+    /* キャンセルボタン */
     #loading button {
-      margin-top: 25px;
-      padding: 12px 24px;
+      margin-top: 20px;
+      padding: 10px 20px;
       background-color: #ff5722;
       border: none;
-      border-radius: 10px;
+      border-radius: 5px;
       color: white;
       cursor: pointer;
       font-size: 1rem;
-      transition: background-color 0.3s ease;
     }
 
     #loading button:hover {
@@ -248,10 +199,9 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(255, 255, 255, 0.95);
-      z-index: 999;
-      display: none;
-      backdrop-filter: blur(5px);
+      background: rgba(255, 255, 255, 0.8); /* 半透明の白 */
+      z-index: 999; /* 他の要素の上に表示 */
+      display: none; /* 初期状態では非表示 */
     }
 
     #custom-alert {
@@ -259,14 +209,12 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      z-index: 1000;
-      background: rgba(0, 0, 0, 0.9);
+      z-index: 1000; /* 膜の上に配置 */
+      background: rgba(0, 0, 0, 0.8); /* 黒背景 */
       color: white;
-      padding: 40px;
-      border-radius: 20px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-      max-width: 400px;
-      width: 90%;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     }
 
     #custom-alert .alert-content {
@@ -275,104 +223,55 @@
 
     #custom-alert button {
       margin-top: 25px;
-      padding: 12px 20px;
-      background-color: #667eea;
+      padding: 10px 15px;
+      background-color: #ff5722;
       border: none;
-      border-radius: 10px;
+      border-radius: 5px;
       color: white;
       cursor: pointer;
-      transition: background-color 0.3s ease;
     }
 
     #custom-alert button:hover {
-      background-color: #5a67d8;
-    }
-
-    .feature-badge {
-      display: inline-block;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 0.8rem;
-      font-weight: 500;
-      margin-left: 8px;
-    }
-
-    .description-box {
-      background: #f8f9fa;
-      border-left: 4px solid #667eea;
-      padding: 16px 20px;
-      margin-bottom: 20px;
-      border-radius: 0 10px 10px 0;
-    }
-
-    .description-box h3 {
-      color: #2d3748;
-      margin-bottom: 8px;
-      font-size: 1.1rem;
-    }
-
-    .description-box p {
-      color: #4a5568;
-      line-height: 1.5;
-      margin: 4px 0;
+      background-color: #e64a19;
     }
   </style>
   <body>
     <header>
-      <h1>まじん式スライドジェネレーター</h1>
-      <p class="subtitle">AI駆動でプロフェッショナルなGoogleスライドを自動生成</p>
+      <h1>SlideGenerator2</h1>
     </header>
     <div class="container">
-      <h2>まじん式スライドジェネレーター テスト</h2>
-      
-      <div class="description-box">
-        <h3>🎯 まじん式の特徴</h3>
-        <p>• <strong>Google風デザイン:</strong> 美しく統一されたデザインテンプレート</p>
-        <p>• <strong>多彩な表現:</strong> 比較、プロセス、タイムライン、カードなど豊富なパターン</p>
-        <p>• <strong>スピーカーノート:</strong> 発表原稿も自動生成</p>
-        <p>• <strong>構造化AI:</strong> Gemini最新モデルによる高精度生成</p>
-      </div>
-
       <form onsubmit="event.preventDefault();">
+        <div class="main-message">
+          <h1>プレゼンテーションのイメージを教えてください</h1>
+        </div>
         <div class="form-group">
-          <label class="form-label" for="prompt">
-            <span class="material-symbols-outlined">edit_note</span>
-            プレゼンテーション内容
-            <span class="feature-badge">必須</span>
-          </label>
           <textarea
             id="prompt"
-            rows="15"
+            rows="17"
             placeholder="作成したいプレゼンテーションの内容を入力してください。
 
-テスト例：
-・シンプルなテーマ：「チームワークの重要性」
-・詳細な内容：
-  プロジェクト進捗報告
-  1. 現在の状況
-     - 完了タスク：設計、開発フェーズ1
-     - 進行中：テスト、ドキュメント作成
-  2. 課題と対策
-     - スケジュール遅延：リソース追加で対応
-     - 品質保証：テスト強化
-  3. 今後の予定
-     - 来月：リリース準備
-     - 来々月：本格運用開始"
+a. おまかせ生成の場合
+    タイトルやテーマを入力してください。AIが補完してプレゼンテーションを作成します。
+    例）生成AIとは
+
+b. カスタム生成の場合
+    スライドに含めたい内容をできるだけ細かく記述してください。
+    メモ書きをそのまま貼り付けても実行できます。
+    例）生成AIとは
+        1. 生成AIの仕組み
+        2. 生成AIでできる10のこと
+            文章作成
+            アイディア出し
+            （残りは自動で生成）
+        ..."
           ></textarea>
         </div>
         <div class="form-group">
-          <label class="form-label" for="generate-option">
-            <span class="material-symbols-outlined">tune</span>
-            詳細設定・要望
-            <span class="feature-badge">任意</span>
-          </label>
           <textarea
             id="generate-option"
-            rows="3"
-            placeholder="プレゼンテーションの詳細要望を入力してください。
-例）社内研修用、10分程度、具体例重視、聞き手との対話形式"
+            rows="2"
+            placeholder="作成したいプレゼンテーションの詳細、使用用途、内容の要望を入力してください。
+    例）部内の共有会で話す用、スライド5枚程度、冒頭で聞き手に問いかける形式、具体例多め"
           ></textarea>
         </div>
         <div class="btn-area">
@@ -382,7 +281,7 @@
             class="submit-btn"
             onclick="handleSubmit(event)"
           >
-            <span class="material-symbols-outlined">science</span>テスト生成
+            テスト生成
           </button>
         </div>
       </form>
@@ -390,7 +289,7 @@
       <div id="loading">
         <div class="loading-content">
           <div class="spinner"></div>
-          <p>まじん式AIがスライドを生成中...</p>
+          <p>作成中...</p>
           <button id="cancel-loading" onclick="cancelLoading()">
             キャンセル
           </button>
@@ -411,12 +310,13 @@
           class="submit-btn"
           onclick="window.open('', '_blank');"
         >
-          <span class="material-symbols-outlined">open_in_new</span>
-          スライドを開く
+          <!-- 出力されたGSlideのリンクが入る -->
+          <span class="material-symbols-outlined"> open_in_new </span
+          >スライドをチェック
         </button>
       </div>
     </div>
-    <footer>© 2025 まじん式スライドジェネレーター - Powered by Gemini AI</footer>
+    <footer>© 2025 TOPPAN Inc. AI Powered Project.</footer>
   </body>
   <script>
     let isCancelled = false; // キャンセルフラグ
@@ -458,7 +358,7 @@
         if (loadingElement) {
           loadingElement.style.display = "none";
         }
-        showCustomAlert("プレゼンテーション内容が未入力です。内容を入力して再度実行してください。");
+        showCustomAlert("テキストが未入力です。入力して再度実行してください。");
         return;
       }
 
@@ -466,7 +366,7 @@
       let apiMethod;
       if (buttonId === "test-generate") {
         console.log("テスト生成を実行");
-        apiMethod = "mainCustom"; // カスタム生成用のGoogle Apps Script関数を使用
+        apiMethod = "mainCustom"; // カスタム生成用のGoogle Apps Script関数
       } else {
         console.error("不明なボタンIDです");
         if (loadingElement) {
@@ -488,7 +388,7 @@
           if (loadingElement) {
             loadingElement.style.display = "none";
           }
-          showCustomAlert("✨ まじん式スライド生成が完了しました！\n\nGoogle風デザインで美しいプレゼンテーションが作成されました。");
+          showCustomAlert("スライド生成が完了しました！");
           // リンクを更新
           if (linkButton) {
             linkButton.onclick = () => window.open(response, "_blank"); // リンクをGoogle Apps Scriptの結果に設定
@@ -504,9 +404,9 @@
           if (loadingElement) {
             loadingElement.style.display = "none";
           }
-          showCustomAlert("❌ エラーが発生しました。\n\n以下をご確認ください：\n• インターネット接続\n• Gemini API設定\n• 入力内容の妥当性\n\nしばらく時間をおいて再度お試しください。");
+          showCustomAlert("エラーが発生しました。もう一度お試しください。");
         })
-        [apiMethod](prompt, generateOption); // テスト生成実行
+        [apiMethod](prompt, generateOption); // おまかせ生成かカスタム生成かで処理を分岐
 
       google.script.run.outputLog(prompt, generateOption, buttonId);
     }
@@ -531,11 +431,5 @@
         alertOverlay.style.display = "none"; // 非表示
       }
     }
-
-    // ページ読み込み時の初期化
-    document.addEventListener('DOMContentLoaded', function() {
-      // プレースホルダーのアニメーション効果など、必要に応じて追加
-      console.log('まじん式スライドジェネレーター初期化完了');
-    });
   </script>
 </html>

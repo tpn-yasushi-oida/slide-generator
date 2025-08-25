@@ -5,9 +5,10 @@
 
 // --- Webアプリのメイン関数 ---
 function doGet() {
-  return HtmlService.createTemplateFromFile('index')
-    .evaluate()
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  var t = HtmlService.createTemplateFromFile("index");
+  var html = t.evaluate();
+  html.setTitle("SlideGenerator2");
+  return html;
 }
 
 /**
@@ -16,19 +17,21 @@ function doGet() {
 function mainAuto(prompt, generateOption) {
   try {
     Logger.log(`おまかせ生成開始: ${prompt}`);
-    
+
     // おまかせ生成用のプロンプト拡張
     const expandedPrompt = expandAutoPrompt(prompt, generateOption);
-    
+
     // Gemini APIでslideDataを生成
-    const slideData = generateSlideDataWithGemini(expandedPrompt, getSlideDataSchema());
-    
+    const slideData = generateSlideDataWithGemini(
+      expandedPrompt,
+      getSlideDataSchema()
+    );
+
     // スライドを生成
     const presentationUrl = generateSlideFromJson(slideData);
-    
+
     Logger.log(`おまかせ生成完了: ${presentationUrl}`);
     return presentationUrl;
-    
   } catch (error) {
     Logger.log(`おまかせ生成エラー: ${error.message}`);
     throw new Error(`スライド生成に失敗しました: ${error.message}`);
@@ -41,40 +44,41 @@ function mainAuto(prompt, generateOption) {
 function mainCustom(prompt, generateOption) {
   try {
     Logger.log(`カスタム生成開始: ${prompt}`);
-    
+
     // カスタム生成用のプロンプト拡張
     const expandedPrompt = expandCustomPrompt(prompt, generateOption);
-    
+
     // Gemini APIでslideDataを生成
-    const slideData = generateSlideDataWithGemini(expandedPrompt, getSlideDataSchema());
-    
+    const slideData = generateSlideDataWithGemini(
+      expandedPrompt,
+      getSlideDataSchema()
+    );
+
     // スライドを生成
     const presentationUrl = generateSlideFromJson(slideData);
-    
+
     Logger.log(`カスタム生成完了: ${presentationUrl}`);
     return presentationUrl;
-    
   } catch (error) {
     Logger.log(`カスタム生成エラー: ${error.message}`);
     throw new Error(`スライド生成に失敗しました: ${error.message}`);
   }
 }
 
-
-
-
 /**
  * おまかせ生成用のプロンプト拡張
  */
 function expandAutoPrompt(prompt, generateOption) {
   const today = new Date();
-  const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
-  
+  const dateStr = `${today.getFullYear()}.${String(
+    today.getMonth() + 1
+  ).padStart(2, "0")}.${String(today.getDate()).padStart(2, "0")}`;
+
   const systemPrompt = getGeminiPrompt();
   const userContent = `【おまかせ生成モード】
 テーマ: ${prompt}
 
-追加要望: ${generateOption || 'なし'}
+追加要望: ${generateOption || "なし"}
 
 生成日: ${dateStr}
 
@@ -100,14 +104,16 @@ ${userContent}
  */
 function expandCustomPrompt(prompt, generateOption) {
   const today = new Date();
-  const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
-  
+  const dateStr = `${today.getFullYear()}.${String(
+    today.getMonth() + 1
+  ).padStart(2, "0")}.${String(today.getDate()).padStart(2, "0")}`;
+
   const systemPrompt = getGeminiPrompt();
   const userContent = `【カスタム生成モード】
 ユーザー提供内容:
 ${prompt}
 
-追加要望・詳細設定: ${generateOption || 'なし'}
+追加要望・詳細設定: ${generateOption || "なし"}
 
 生成日: ${dateStr}
 
@@ -139,14 +145,13 @@ function outputLog(prompt, generateOption, buttonId) {
       buttonId: buttonId,
       prompt: prompt,
       generateOption: generateOption,
-      promptLength: prompt ? prompt.length : 0
+      promptLength: prompt ? prompt.length : 0,
     };
-    
+
     Logger.log(`ユーザーアクション: ${JSON.stringify(logData)}`);
-    
+
     // スプレッドシートログ（オプション）
     // logToSpreadsheet(logData);
-    
   } catch (error) {
     Logger.log(`ログ出力エラー: ${error.message}`);
   }
