@@ -277,11 +277,11 @@ b. カスタム生成の場合
         <div class="btn-area">
           <button
             type="submit"
-            id="test-generate"
+            id="slide-generate"
             class="submit-btn"
             onclick="handleSubmit(event)"
           >
-            テスト生成
+            スライド生成
           </button>
         </div>
       </form>
@@ -364,9 +364,9 @@ b. カスタム生成の場合
 
       // ボタンIDに応じた処理
       let apiMethod;
-      if (buttonId === "test-generate") {
-        console.log("テスト生成を実行");
-        apiMethod = "mainTest"; // 単一ルート: テスト生成
+      if (buttonId === "slide-generate") {
+        console.log("スライド生成を実行");
+        apiMethod = "mainTest"; // 単一ルート: スライド生成
       } else {
         console.error("不明なボタンIDです");
         if (loadingElement) {
