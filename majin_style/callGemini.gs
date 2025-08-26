@@ -518,7 +518,7 @@ function getSlideDataSchema() {
             type: { type: "STRING", enum: ["cards"] },
             title: { type: "STRING" },
             subhead: { type: "STRING" },
-            columns: { type: "INTEGER", enum: [2, 3] },
+            columns: { type: "INTEGER" },
             items: {
               type: "ARRAY",
               items: {
