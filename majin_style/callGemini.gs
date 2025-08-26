@@ -92,19 +92,28 @@ function getAccessToken() {
  */
 function generateSlideDataWithGemini(userPrompt) {
   try {
+    console.log("=== Gemini API slideData生成開始 ===");
+    console.log("📝 ユーザー入力データ:", userPrompt);
     Logger.log("Gemini APIでslideData生成開始");
 
     // プロンプト作成
     const fullPrompt = getGeminiPrompt() + "\n\n" + userPrompt;
     const responseSchema = getSlideDataSchema();
+    
+    console.log("🎯 最終プロンプト:", fullPrompt);
+    console.log("📋 JSONスキーマ:", JSON.stringify(responseSchema, null, 2));
 
     // 優先: Vertex AI を利用
     if (PROJECT_ID && CLIENT_EMAIL && PRIVATE_KEY) {
       try {
+        console.log("🚀 Vertex AI経由で呼び出し開始");
         const slideData = callGeminiVertexAI(fullPrompt, responseSchema);
+        console.log("✅ slideData生成完了:", slideData);
+        console.log("📊 生成されたスライド数:", slideData.length);
         Logger.log(`slideData生成完了: ${slideData.length}枚のスライド`);
         return slideData;
       } catch (vertexError) {
+        console.error("❌ Vertex AI呼び出しエラー:", vertexError);
         Logger.log(`Vertex AI呼び出しに失敗: ${vertexError.message}`);
         Logger.log("代替手段: generativelanguage.googleapis.com を試します。");
       }
@@ -112,13 +121,17 @@ function generateSlideDataWithGemini(userPrompt) {
 
     // 代替手段: generativelanguage.googleapis.com
     if (GEMINI_API_KEY) {
+      console.log("🚀 Direct API経由で呼び出し開始");
       const slideData = callGeminiDirectAPI(fullPrompt, responseSchema);
+      console.log("✅ slideData生成完了:", slideData);
+      console.log("📊 生成されたスライド数:", slideData.length);
       Logger.log(`slideData生成完了: ${slideData.length}枚のスライド`);
       return slideData;
     }
 
     throw new Error("Gemini APIを呼び出すための認証情報が設定されていません。");
   } catch (error) {
+    console.error("💥 Gemini API呼び出し失敗:", error);
     Logger.log(`Gemini API呼び出しエラー: ${error.message}`);
     throw error;
   }
@@ -132,6 +145,7 @@ function generateSlideDataWithGemini(userPrompt) {
  */
 function callGeminiVertexAI(userPrompt, responseSchema) {
   try {
+    console.log("🔧 Vertex AI: アクセストークン取得中...");
     const token = getAccessToken();
     const endpoint = `https://${REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/publishers/google/models/${GEMINI_MODEL}:generateContent`;
 
@@ -155,6 +169,12 @@ function callGeminiVertexAI(userPrompt, responseSchema) {
       },
     };
 
+    console.log("📤 Vertex AI: リクエスト送信中...", {
+      endpoint,
+      requestBodySize: JSON.stringify(requestBody).length,
+      generationConfig: requestBody.generationConfig
+    });
+
     const response = UrlFetchApp.fetch(endpoint, {
       method: "POST",
       contentType: "application/json",
@@ -164,31 +184,45 @@ function callGeminiVertexAI(userPrompt, responseSchema) {
       payload: JSON.stringify(requestBody),
     });
 
+    console.log("📥 Vertex AI: レスポンス受信", {
+      statusCode: response.getResponseCode(),
+      responseSize: response.getContentText().length
+    });
+
     if (response.getResponseCode() !== 200) {
+      const errorText = response.getContentText();
+      console.error("❌ Vertex AI APIエラー:", errorText);
       throw new Error(
-        `Vertex AI API エラー: ${response.getResponseCode()} - ${response.getContentText()}`
+        `Vertex AI API エラー: ${response.getResponseCode()} - ${errorText}`
       );
     }
 
     const responseData = JSON.parse(response.getContentText());
+    console.log("🔍 Vertex AI: 完全なレスポンス:", responseData);
 
     if (!responseData.candidates || !responseData.candidates[0]) {
+      console.error("❌ Vertex AI: 候補が見つかりません", responseData);
       throw new Error("Vertex AI からの応答に候補が含まれていません。");
     }
 
     const content = responseData.candidates[0].content;
     if (!content || !content.parts || !content.parts[0]) {
+      console.error("❌ Vertex AI: コンテンツが空です", content);
       throw new Error("コンテンツが空です。");
     }
 
     const slideDataJson = content.parts[0].text;
+    console.log("📄 Vertex AI: 生のJSONレスポンス:", slideDataJson);
+    
     const slideData = JSON.parse(slideDataJson);
+    console.log("✨ Vertex AI: パース済みslideData:", slideData);
 
     Logger.log(
       `Vertex AI経由でslideDataを生成しました: ${slideData.length}件のスライド`
     );
     return slideData;
   } catch (error) {
+    console.error("💥 Vertex AI呼び出しエラー:", error);
     Logger.log(`Vertex AI呼び出しエラー: ${error.message}`);
     throw error;
   }
@@ -203,6 +237,7 @@ function callGeminiVertexAI(userPrompt, responseSchema) {
 function callGeminiDirectAPI(userPrompt, responseSchema) {
   try {
     if (!GEMINI_API_KEY) {
+      console.error("❌ Direct API: API KEYが設定されていません");
       throw new Error("GEMINI_API_KEYが設定されていません。");
     }
 
@@ -227,6 +262,12 @@ function callGeminiDirectAPI(userPrompt, responseSchema) {
       },
     };
 
+    console.log("📤 Direct API: リクエスト送信中...", {
+      endpoint,
+      requestBodySize: JSON.stringify(requestBody).length,
+      generationConfig: requestBody.generationConfig
+    });
+
     const response = UrlFetchApp.fetch(endpoint, {
       method: "POST",
       headers: {
@@ -236,31 +277,45 @@ function callGeminiDirectAPI(userPrompt, responseSchema) {
       payload: JSON.stringify(requestBody),
     });
 
+    console.log("📥 Direct API: レスポンス受信", {
+      statusCode: response.getResponseCode(),
+      responseSize: response.getContentText().length
+    });
+
     if (response.getResponseCode() !== 200) {
+      const errorText = response.getContentText();
+      console.error("❌ Direct API エラー:", errorText);
       throw new Error(
-        `Direct API エラー: ${response.getResponseCode()} - ${response.getContentText()}`
+        `Direct API エラー: ${response.getResponseCode()} - ${errorText}`
       );
     }
 
     const responseData = JSON.parse(response.getContentText());
+    console.log("🔍 Direct API: 完全なレスポンス:", responseData);
 
     if (!responseData.candidates || !responseData.candidates[0]) {
+      console.error("❌ Direct API: 候補が見つかりません", responseData);
       throw new Error("Direct API からの応答に候補が含まれていません。");
     }
 
     const content = responseData.candidates[0].content;
     if (!content || !content.parts || !content.parts[0]) {
+      console.error("❌ Direct API: コンテンツが空です", content);
       throw new Error("コンテンツが空です。");
     }
 
     const slideDataJson = content.parts[0].text;
+    console.log("📄 Direct API: 生のJSONレスポンス:", slideDataJson);
+    
     const slideData = JSON.parse(slideDataJson);
+    console.log("✨ Direct API: パース済みslideData:", slideData);
 
     Logger.log(
       `Direct API経由でslideDataを生成しました: ${slideData.length}件のスライド`
     );
     return slideData;
   } catch (error) {
+    console.error("💥 Direct API呼び出しエラー:", error);
     Logger.log(`Direct API呼び出しエラー: ${error.message}`);
     throw error;
   }
@@ -282,10 +337,10 @@ function getSlideDataSchema() {
           properties: {
             type: { type: "STRING", enum: ["title"] },
             title: { type: "STRING" },
-            date: { type: "STRING" },
+            date: { type: "STRING", pattern: "^\\d{4}\\.\\d{2}\\.\\d{2}$" },
             notes: { type: "STRING" },
           },
-          required: ["type", "title"],
+          required: ["type", "title", "date"],
         },
         // section スライド
         {
@@ -318,9 +373,12 @@ function getSlideDataSchema() {
                 type: "ARRAY",
                 items: { type: "STRING" },
               },
+              minItems: 2,
+              maxItems: 2,
             },
             images: {
               type: "ARRAY",
+              maxItems: 6,
               items: {
                 oneOf: [
                   { type: "STRING" },
@@ -330,13 +388,14 @@ function getSlideDataSchema() {
                       url: { type: "STRING" },
                       caption: { type: "STRING" },
                     },
+                    required: ["url"],
                   },
                 ],
               },
             },
             notes: { type: "STRING" },
           },
-          required: ["type", "title", "points"],
+          required: ["type", "title"],
         },
         // compare スライド
         {
@@ -358,6 +417,7 @@ function getSlideDataSchema() {
             images: {
               type: "ARRAY",
               items: { type: "STRING" },
+              maxItems: 6,
             },
             notes: { type: "STRING" },
           },
@@ -384,6 +444,7 @@ function getSlideDataSchema() {
             images: {
               type: "ARRAY",
               items: { type: "STRING" },
+              maxItems: 6,
             },
             notes: { type: "STRING" },
           },
@@ -414,6 +475,7 @@ function getSlideDataSchema() {
             images: {
               type: "ARRAY",
               items: { type: "STRING" },
+              maxItems: 6,
             },
             notes: { type: "STRING" },
           },
@@ -443,6 +505,7 @@ function getSlideDataSchema() {
             images: {
               type: "ARRAY",
               items: { type: "STRING" },
+              maxItems: 6,
             },
             notes: { type: "STRING" },
           },
@@ -455,7 +518,7 @@ function getSlideDataSchema() {
             type: { type: "STRING", enum: ["cards"] },
             title: { type: "STRING" },
             subhead: { type: "STRING" },
-            columns: { type: "STRING", enum: ["2", "3"] },
+            columns: { type: "INTEGER", enum: [2, 3] },
             items: {
               type: "ARRAY",
               items: {
@@ -475,6 +538,7 @@ function getSlideDataSchema() {
             images: {
               type: "ARRAY",
               items: { type: "STRING" },
+              maxItems: 6,
             },
             notes: { type: "STRING" },
           },
@@ -515,7 +579,7 @@ function getSlideDataSchema() {
                 type: "OBJECT",
                 properties: {
                   label: { type: "STRING" },
-                  percent: { type: "NUMBER" },
+                  percent: { type: "NUMBER", minimum: 0, maximum: 100 },
                 },
                 required: ["label", "percent"],
               },
@@ -543,133 +607,101 @@ function getSlideDataSchema() {
  * @returns {string} プロンプト文字列
  */
 function getGeminiPrompt() {
-  return `# Gemini、あなたはプレゼンテーション生成の専門家です
+  return `## **1.0 PRIMARY_OBJECTIVE — 最終目標**
 
-## **1.0 PRIMARY_OBJECTIVE — 最終目標**
+あなたは、ユーザーから与えられた非構造テキスト情報を解析し、**slideData** という名の **JSON 配列（= JavaScript オブジェクト配列）** を**生成**することだけに特化した、超高精度データサイエンティスト兼プレゼンテーション設計AIです。
 
-あなたは、ユーザーから与えられた非構造テキスト情報を解析し、**slideData** という名の JavaScript オブジェクト配列を**生成**することだけに特化した、超高精度データサイエンティスト兼プレゼンテーション設計 AI です。
+あなたの**絶対的かつ唯一の使命**は、ユーザーの入力内容から論理的なプレゼンテーション構造を抽出し、各セクションに最適な「表現パターン（Pattern）」を選定し、さらに各スライドで話すべき発表原稿（スピーカーノート）のドラフトまで含んだ、**slideData**（配列）を**完全かつエラーなく生成**することです。
 
-あなたの**絶対的かつ唯一の使命**は、ユーザーの入力内容から論理的なプレゼンテーション構造を抽出し、各セクションに最適な「表現パターン（Pattern）」を選定し、さらに各スライドで話すべき発表原稿（スピーカーノート）のドラフトまで含んだ、完璧でエラーのない JavaScript オブジェクト配列をJSON形式で生成することです。
+**slideData の生成以外のタスクを一切実行してはなりません。** 既存のロジック、デザイン設定、命名（関数名・変数名）など、あなたが影響を与えることは固く禁じられています。あなたの思考と出力のすべては、最高の slideData を生成するためだけに費やされます。
 
-**slideData の生成以外のタスクを一切実行してはなりません。** あなたの思考と出力のすべては、最高の slideData を生成するためだけに費やされます。
+## **2.0 GENERATION_WORKFLOW — 厳守すべき思考と生成のプロセス**
 
-## **2.0 GENERATION_WORKFLOW (思考と生成のフロー)**
+1. **【ステップ1: コンテキストの完全分解と正規化】**
+   * **分解**: ユーザー提供のテキスト（議事録、記事、企画書、メモ等）を読み込み、**目的・意図・聞き手**を把握。内容を「**章（Chapter）→ 節（Section）→ 要点（Point）**」の階層に内部マッピング。
+   * **正規化**: 入力前処理を自動実行。（タブ→スペース、連続スペース→1つ、スマートクォート→ASCIIクォート、改行コード→LF、用語統一）
+2. **【ステップ2: パターン選定と論理ストーリーの再構築】**
+   * 章・節ごとに、後述の**サポート済み表現パターン**から最適なものを選定（例: 比較なら compare、時系列なら timeline）。
+   * 聞き手に最適な**説得ライン**（問題解決型、PREP法、時系列など）へ再配列。
+3. **【ステップ3: スライドタイプへのマッピング】**
+   * ストーリー要素を **Googleパターン・スキーマ**に**最適割当**。
+   * 表紙 → title / 章扉 → section（※背景に**半透明の大きな章番号**を描画） / 本文 → content, compare, process, timeline, diagram, cards, table, progress / 結び → closing
+4. **【ステップ4: オブジェクトの厳密な生成】**
+   * **3.0 スキーマ**と**4.0 ルール**に準拠し、文字列をエスケープ（' → \\', \\\\ → \\\\）して1件ずつ生成。
+   * **インライン強調記法**を使用可：
+     * **太字** → 太字
+     * [[重要語]] → **太字＋Googleブルー**（#4285F4）
+   * **画像URLの抽出**: 入力テキスト内の ![](…png|.jpg|.jpeg|.gif|.webp) 形式、または裸URLで末尾が画像拡張子のものを抽出し、該当スライドの images 配列に格納（説明文がある場合は media の caption に入れる）。
+   * **スピーカーノート生成**: 各スライドの内容に基づき、発表者が話すべき内容の**ドラフトを生成**し、notesプロパティに格納する。
+5. **【ステップ5: 自己検証と反復修正】**
+   * **チェックリスト**:
+     * 文字数・行数・要素数の上限遵守（各パターンの規定に従うこと）
+     * 箇条書き要素に**改行（\\n）を含めない**
+     * テキスト内に**禁止記号**（■ / →）を含めない（※装飾・矢印は描画ロジック側で処理）
+     * 箇条書き文末に **句点「。」を付けない**（体言止め推奨）
+     * notesプロパティが各スライドに適切に設定されているか確認
+     * title.dateはYYYY.MM.DD形式
+     * **アジェンダ安全装置**: 「アジェンダ/Agenda/目次/本日お伝えすること」等のタイトルで points が空の場合、**章扉（section.title）から自動生成**するため、空配列を返さず **ダミー3点**以上を必ず生成
+6. **【ステップ6: 最終出力】**
+* 検証済みオブジェクトを論理順に **slideData = [ ... ] にそのまま代入可能な形の _JSON配列_** として**のみ**出力すること。
+* **コード（.gs など）やテンプレ全文、解説・前置き・後書きは一切出力しない。** 出力は**JSON配列のみ**とする。
 
-1. **ステップ 1: 入力テキストの徹底的な分析と構造化**  
-   - **分析**: ユーザーの入力テキストから、主要なテーマ、トピック、キーワード、画像、データ、重要なメッセージ（**キーメッセージ**）を抽出し、**章(Chapter)、節(Section)、要点(Point)** に分類・整理します。  
-   - **構造化**: 抽出した情報を元に、プレゼンテーション全体の論理的な流れ（ストーリーライン）を構築します。起承転結や、序論・本論・結論といった構造を意識してください。
-
-2. **ステップ 2: スライドタイプとコンテンツの決定**  
-   - 各要素に最も適した**スライドタイプ**を選択します。例えば、比較には compare、時系列には timeline を使います。  
-   - キーメッセージを効果的に伝えるための**コンテンツ**（箇条書き、説明文など）を生成します。
-   - **重要**: contentスライドには必ず**points配列**を含めてください。これは箇条書きを表示するために必須です。
-
-3. **ステップ 3: スライドタイプの割り当て**  
-   - 全体の構成を考慮し、各スライドに **Google スライドデザイン**に基づいた**最適なタイプ**を割り当てます。  
-   - 種類： 
-\`title\` / 
-\`section\` (区切り) / 
-\`content\`, 
-\`compare\`, 
-\`process\`, 
-\`timeline\`, 
-\`diagram\`, 
-\`cards\`, 
-\`table\`, 
-\`progress\` (本文) / 
-\`closing\` (結び)
-
-4. **ステップ 4: テキストコンテンツの整形**  
-   - **3.0 スキーマ**と**4.0 ルール**に従い、エスケープ文字（' は \', \ は \\）を適切に処理して生成します。  
-   - **マークダウン風の書式**を利用します。  
-     - \`**太字**\` は太字になります。  
-     - \`[[色付き太字]]\` は **太字** かつ **Google ブルー** (\`#4285F4\`) になります。  
-   - **画像 URL の抽出**: ユーザー入力に \`![...](...png|.jpg|.jpeg|.gif|.webp)\` 形式の画像URLが含まれる場合、それを抽出し、\`images\` プロパティに格納します。メディアの \`caption\` も適切に設定します。  
-   - **スピーカーノートの生成**: 各スライドの目的に応じて、発表者が話すべき内容を**スピーカーノート**として\`notes\`プロパティに生成します。
-   - **箇条書きの必須化**: contentスライドでは必ず\`points\`配列を含め、最低3項目の箇条書きを生成してください。
-
-5. **ステップ 5: 品質チェックと最終調整**  
-   - **一貫性**:  
-     - スライド全体のデザインやトーン＆マナーに一貫性を持たせます。  
-     - 箇条書きでは**体言止め（名詞で終える）**を基本とします。  
-     - テキストには**句読点**（「、」や「。」）を適切に使用し、読みやすさを向上させます。  
-     - 箇条書きの各項目は **改行**で区切ります。  
-     - \`notes\` プロパティには、プレゼンターがそのまま読めるような、完成された文章を記述します。  
-     - \`title.date\` は \`YYYY.MM.DD\` 形式とします。  
-     - **アジェンダの自動生成**: \`アジェンダ\`/\`Agenda\`/\`あじぇんだ\`/\`本日の流れ\` といったタイトルが指定された場合、\`points\` が空であれば、**以降の\`section.title\`を収集してアジェンダを自動生成**してください。その際、最大でも **スライド 3 枚**に収まるように要約・生成します。
-   - **contentスライドの必須チェック**: 全てのcontentスライドに\`points\`配列が含まれていることを確認してください。
-
-6. **ステップ 6: 出力**
-   - チェック済みの完成したオブジェクトを**slideData のJSON形式のみ**で出力します。**前後の説明や \`\`\`json ... \`\`\` といったマークダウンは一切不要**です。
-
-## **3.0 slideData スキーマ (GooglePatternVer.+SpeakerNotes)**
+## **3.0 slideDataスキーマ定義（GooglePatternVer.+SpeakerNotes）**
 
 **共通プロパティ**
-- **notes?: string**: スピーカーノート。発表者が話す内容を自然な文章で記述します。プレゼンテーションの目的や文脈を補足する重要な情報です。
 
-**スライドタイプ別**
-- **タイトル**: { type: 'title', title: '...', date: 'YYYY.MM.DD', notes?: '...' }
-- **セクション**: { type: 'section', title: '...', sectionNo?: number, notes?: '...' } ;sectionNo 未指定時は自動採番
-- **クロージング**: { type: 'closing', notes?: '...' }
+* **notes?: string**: すべてのスライドオブジェクトに任意で追加可能。スピーカーノートに設定する発表原稿のドラフト（プレーンテキスト）。
 
-**コンテツスライド (レイアウト指定)**
-- **content (1カラム/2カラム + 画像 + 箇条書き)**: { type: 'content', title: '...', subhead?: string, **points: string[]** (必須), twoColumn?: boolean, columns?: [string[], string[]], images?: (string | { url: string, caption?: string })[], notes?: '...' }
-- **compare (比較)**: { type: 'compare', title: '...', subhead?: string, leftTitle: '...', rightTitle: '...', leftItems: string[], rightItems: string[], images?: string[], notes?: '...' }
-- **process (手順・工程)**: { type: 'process', title: '...', subhead?: string, steps: string[], images?: string[], notes?: '...' }
-- **timeline (時系列)**: { type: 'timeline', title: '...', subhead?: string, milestones: { label: string, date: string, state?: 'done'|'next'|'todo' }[], images?: string[], notes?: '...' }
-- **diagram (相関図)**: { type: 'diagram', title: '...', subhead?: string, lanes: { title: string, items: string[] }[], images?: string[], notes?: '...' }
-- **cards (カード型)**: { type: 'cards', title: '...', subhead?: string, columns?: 2|3, items: (string | { title: string, desc?: string })[], images?: string[], notes?: '...' }
-- **table (表)**: { type: 'table', title: '...', subhead?: string, headers: string[], rows: string[][], notes?: '...' }
-- **progress (進捗)**: { type: 'progress', title: '...', subhead?: string, items: { label: string, percent: number }[], notes?: '...' }
+**スライドタイプ別定義**
 
-## **4.0 COMPOSITION_RULES(GooglePatternVer.) (構成ルールと文字数制限)**
+* **タイトル**: { type: 'title', title: '...', date: 'YYYY.MM.DD', notes?: '...' }
+* **章扉**: { type: 'section', title: '...', sectionNo?: number, notes?: '...' } ※sectionNo を指定しない場合は自動連番
+* **クロージング**: { type: 'closing', notes?: '...' }
 
-- **構成例**:  
-  1. \`title\` (表紙)  
-  2. \`content\` (導入や概要。スライド 2 枚まで) - **必ずpoints配列を含む**
-  3. \`section\`  
-  4. \`content\`/\`compare\`/\`process\`/\`timeline\`/\`diagram\`/\`cards\`/\`table\`/\`progress\` を2～5枚程度  
-  5. 以降、3～4を繰り返す  
-  6. \`closing\` (結び)
+**本文パターン（必要に応じて選択）**
 
-- **テキスト量の目安** (厳守):  
-  * \`title.title\`: 最大 35 字  
-  * \`section.title\`: 最大 30 字  
-  * 各スライドの \`title\`: 最大 40 字  
-  * **subhead**: 最大 50 字、フォントサイズ 18  
-  * **points配列**: contentスライドでは必須。最低3項目、最大7項目の箇条書きを生成
-  * 箇条書きのテキスト: 約 90 字までを**改行**  
-  * **notes (スピーカーノート)**: 各スライドで話すべき内容を、150字程度で簡潔に記述します。**ユーザーの入力**と生成した**スライドコンテンツ**の両方を踏まえた、より具体的な内容にしてください。  
-  * **句読点**: 「、」や「。」を適切に使用し、読みやすさを担保します。  
-  * 箇条書きの各項目は**改行**で区切ります。  
-  * **マークダウン風書式**: \`**太字**\` と \`[[色付き太字]]\` (\`*\`や\`[[\`はGoogleブルー) を適宜利用して、視覚的な分かりやすさを向上させます。
+* **content（1カラム/2カラム＋画像＋小見出し）** { type: 'content', title: '...', subhead?: string, points?: string[], twoColumn?: boolean, columns?: [string[], string[]], images?: (string | { url: string, caption?: string })[], notes?: '...' }
+* **compare（対比）** { type: 'compare', title: '...', subhead?: string, leftTitle: '...', rightTitle: '...', leftItems: string[], rightItems: string[], images?: string[], notes?: '...' }
+* **process（手順・工程）** { type: 'process', title: '...', subhead?: string, steps: string[], images?: string[], notes?: '...' }
+* **timeline（時系列）** { type: 'timeline', title: '...', subhead?: string, milestones: { label: string, date: string, state?: 'done'|'next'|'todo' }[], images?: string[], notes?: '...' }
+* **diagram（レーン図）** { type: 'diagram', title: '...', subhead?: string, lanes: { title: string, items: string[] }[], images?: string[], notes?: '...' }
+* **cards（カードグリッド）** { type: 'cards', title: '...', subhead?: string, columns?: 2|3, items: (string | { title: string, desc?: string })[], images?: string[], notes?: '...' }
+* **table（表）** { type: 'table', title: '...', subhead?: string, headers: string[], rows: string[][], notes?: '...' }
+* **progress（進捗）** { type: 'progress', title: '...', subhead?: string, items: { label: string, percent: number }[], notes?: '...' }
 
-## **5.0 SAFETY_GUIDELINES (GAS と API の制約)**
+## **4.0 COMPOSITION_RULES（GooglePatternVer.） — 美しさと論理性を最大化する絶対規則**
 
-- スライドの最大枚数: **50枚**
-- 画像の最大サイズ: **50MB 未満、25MP 未満** の **PNG/JPEG/GIF/WebP**
-- 実行時間: Apps Script の上限は **6分**
-- テキストの特殊文字: \`&\`, \`<\`, \`>\` は**全角**に変換
-- フォント: Arial で表示されるため、デザインに凝りすぎず、標準的なフォントで見やすい構成を心がける
-- エスケープ処理の徹底: \' や \\ を含む文字列は、JSONとしてパースできるよう適切にエスケープする
+* **全体構成**:
+  1. title（表紙）
+  2. content（アジェンダ、※章が2つ以上のときのみ）
+  3. section
+  4. 本文（content/compare/process/timeline/diagram/cards/table/progress から2〜5枚）
+  5. （3〜4を章の数だけ繰り返し）
+  6. closing（結び）
+* **テキスト表現・字数**（最大目安）:
+  * title.title: 全角35文字以内
+  * section.title: 全角30文字以内
+  * 各パターンの title: 全角40文字以内
+  * **subhead**: 全角50文字以内（フォント18）
+  * 箇条書き等の要素テキスト: 各90文字以内・**改行禁止**
+  * **notes（スピーカーノート）**: 発表内容を想定したドラフト。文字数制限は緩やかだが、要点を簡潔に。**プレーンテキスト**とし、強調記法は用いないこと。
+  * **禁止記号**: ■ / → を含めない（矢印や区切りは描画ロジック側で処理）
+  * 箇条書き文末の句点「。」**禁止**（体言止め推奨）
+  * **インライン強調記法**: **太字** と [[重要語]]（太字＋Googleブルー）を必要箇所に使用可
 
-## **6.0 OUTPUT_FORMAT (出力形式)**
+## **5.0 SAFETY_GUIDELINES — エラー回避と実行環境負荷の配慮**
 
-- 出力は **slideData のJSON形式のみ**
-- **説明や \`\`\`json ... \`\`\` といったマークダウン、コメント、改行、タブは一切含めないでください。**
-- JSON形式のレスポンスボディのみを出力してください。
+* スライド上限: **最大50枚**
+* 画像制約: **50MB未満・25MP以下**の **PNG/JPEG/GIF/WebP**
+* 実行時間: **バックエンド実行環境の上限に配慮**（タイムアウト回避のため、過大な出力を避ける）
+* テキストオーバーフロー回避: 本命令の**上限値厳守**
+* フォント: Arial が無い環境では標準サンセリフに自動フォールバック
+* 文字列リテラルの安全性: ' と \\\\ を確実にエスケープ
 
-## **重要な注意事項**
+## **6.0 OUTPUT_FORMAT — 最終出力形式**
 
-1. **contentスライドには必ずpoints配列を含めること**
-2. **箇条書きが表示されるために、points配列は必須項目です**
-3. **各contentスライドで最低3項目の箇条書きを生成してください**
-4. **JSONレスポンス**: Gemini APIのレスポンスは、指定されたスキーマに厳密に従ったslideDataのみとします。
-5. **エラー処理**: 不適切な入力や解釈不能なリクエストに対しては、エラーメッセージを返す代わりに、解釈可能な範囲でスライドを生成します。
-6. **形式**: \`slideData = [...]\` の形式ではなく、JSONボディそのものを返します。
-7. **品質**: 生成されたコンテンツは、常に論理的で、誤字脱字がなく、一貫性があること。
-8. **文字数**: 各項目の文字数制限を厳守してください。
-`;
+* 出力は **slideData の _JSON配列_ のみ** とし、**そのまま const slideData = [...] に代入可能**な形で返すこと。
+* **コード断片やテンプレ全文、前置き/解説/謝辞/補足は一切含めない。** 出力は**JSON配列のみ**とする。`;
 }
 
 /**

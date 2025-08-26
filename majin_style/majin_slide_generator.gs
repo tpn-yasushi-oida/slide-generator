@@ -219,24 +219,59 @@ let __SECTION_COUNTER = 0; // セクション番号のカウンタ
 function generatePresentationFromData(slideData) {
   let presentation;
   try {
+    console.log("=== Google スライド生成開始 ===");
+    console.log("📄 入力slideData:", slideData);
+    console.log("📊 slideData概要:", {
+      総数: slideData.length,
+      タイプ別集計: slideData.reduce((acc, s) => {
+        acc[s.type] = (acc[s.type] || 0) + 1;
+        return acc;
+      }, {})
+    });
+
+    // アジェンダ自動生成のためのグローバル変数設定
+    _globalSlideData = slideData;
+    console.log("🌐 グローバルslideData設定完了 (アジェンダ生成用)");
+
     presentation = SETTINGS.TARGET_PRESENTATION_ID
       ? SlidesApp.openById(SETTINGS.TARGET_PRESENTATION_ID)
       : SlidesApp.create('Generated Presentation');
     
     if (!presentation) throw new Error('プレゼンテーションを開けませんでした。');
     
+    console.log("📁 プレゼンテーション作成完了:", presentation.getId());
+
     if (SETTINGS.SHOULD_CLEAR_ALL_SLIDES) {
       const slides = presentation.getSlides();
+      console.log(`🗑️ 既存スライドを削除中... (${slides.length}枚)`);
       for (let i = slides.length - 1; i >= 0; i--) slides[i].remove();
     }
     
     __SECTION_COUNTER = 0;
     
     const layout = createLayoutManager(presentation.getPageWidth(), presentation.getPageHeight());
+    console.log("📐 レイアウトマネージャー初期化完了:", {
+      pageWidth: presentation.getPageWidth(),
+      pageHeight: presentation.getPageHeight(),
+      scaleX: layout.scaleX,
+      scaleY: layout.scaleY
+    });
     
     let pageCounter = 0;
     for (let i = 0; i < slideData.length; i++) {
       const data = slideData[i];
+      console.log(`\n🔧 スライド ${i + 1}/${slideData.length} 生成開始`);
+      console.log("📋 スライドデータ:", {
+        type: data.type,
+        title: data.title || 'N/A',
+        hasSubhead: !!data.subhead,
+        hasPoints: !!data.points,
+        pointsCount: Array.isArray(data.points) ? data.points.length : 0,
+        hasNotes: !!data.notes,
+        hasImages: Array.isArray(data.images) && data.images.length > 0,
+        otherProps: Object.keys(data).filter(k => !['type', 'title', 'subhead', 'points', 'notes', 'images'].includes(k))
+      });
+
       Logger.log(`スライド生成開始: ${i + 1}/${slideData.length} - タイプ: ${data.type}, タイトル: ${data.title || 'N/A'}`);
       
       const generator = slideGenerators[data.type];
@@ -245,24 +280,35 @@ function generatePresentationFromData(slideData) {
       if (generator) {
         try {
           const slide = presentation.appendSlide(SlidesApp.PredefinedLayout.BLANK);
+          console.log(`✅ 空スライド作成完了: ${i + 1}`);
           Logger.log(`スライド作成完了: ${i + 1} - 生成関数実行中...`);
           
+          console.log(`🎨 ${data.type} スライド生成中...`);
           generator(slide, data, layout, pageCounter);
+          console.log(`✨ ${data.type} スライド生成完了: ${i + 1}`);
           Logger.log(`スライド生成成功: ${i + 1} - タイプ: ${data.type}`);
           
           // ノート（スピーカーノート）の追加
           if (data.notes) {
             try {
+              console.log(`📝 スピーカーノート追加中: ${i + 1}`);
               const notesShape = slide.getNotesPage().getSpeakerNotesShape();
               if (notesShape) {
                 notesShape.getText().setText(data.notes);
+                console.log(`✅ スピーカーノート追加成功: ${i + 1}`);
                 Logger.log(`ノート追加成功: ${i + 1}`);
               }
             } catch (e) {
+              console.error(`❌ スピーカーノート追加失敗: ${i + 1}`, e);
               Logger.log(`ノート追加失敗: ${i + 1} - ${e.message}`);
             }
           }
         } catch (e) {
+          console.error(`💥 スライド生成エラー: ${i + 1}`, {
+            type: data.type,
+            error: e,
+            data: data
+          });
           Logger.log(`スライド生成エラー: ${i + 1} - タイプ: ${data.type}`);
           Logger.log(`エラー詳細: ${e.message}`);
           Logger.log(`スタック: ${e.stack}`);
@@ -270,14 +316,19 @@ function generatePresentationFromData(slideData) {
           throw new Error(`スライド ${i + 1} (タイプ: ${data.type}) の生成に失敗しました: ${e.message}`);
         }
       } else {
+        console.warn(`⚠️ 未対応のスライドタイプ: ${data.type}`);
         Logger.log(`警告: 未対応のスライドタイプです - ${data.type}`);
       }
     }
     
     // プレゼンテーションのURLを返す
-    return presentation.getUrl();
+    const url = presentation.getUrl();
+    console.log("🎉 Google スライド生成完了!");
+    console.log("🔗 プレゼンテーションURL:", url);
+    return url;
     
   } catch (e) {
+    console.error("💥 Google スライド生成失敗:", e);
     Logger.log(`スライド生成エラー: ${e.message}\nStack: ${e.stack}`);
     throw e;
   }
@@ -420,17 +471,50 @@ function createSectionSlide(slide, data, layout, pageNum) {
 
 // content 1/2 カラム + 箇条書き + 画像
 function createContentSlide(slide, data, layout, pageNum) {
+  console.log("🎨 contentスライド生成開始:", {
+    title: data.title,
+    hasPoints: !!data.points,
+    pointsCount: Array.isArray(data.points) ? data.points.length : 0,
+    hasSubhead: !!data.subhead,
+    twoColumn: !!data.twoColumn,
+    hasColumns: !!data.columns,
+    hasImages: Array.isArray(data.images) && data.images.length > 0
+  });
+
   slide.getBackground().setSolidFill(CONFIG.COLORS.background_white);
   drawStandardTitleHeader(slide, layout, 'contentSlide', data.title);
   const dy = drawSubheadIfAny(slide, layout, 'contentSlide', data.subhead);
   
   // アジェンダの処理
   const isAgenda = isAgendaTitle(data.title || '');
+  console.log("📋 アジェンダ判定:", {
+    title: data.title,
+    isAgenda: isAgenda
+  });
+
   let points = Array.isArray(data.points) ? data.points.slice(0) : [];
+  
   if (isAgenda && (!points || points.length === 0)) {
+    console.log("🔄 アジェンダ自動生成を実行...");
     points = buildAgendaFromSlideData();
-    if (points.length === 0) points = ['アジェンダ項目1', '項目2', '項目3'];
+    if (points.length === 0) {
+      points = ['アジェンダ項目1', '項目2', '項目3'];
+      console.log("📝 フォールバックアジェンダを使用:", points);
+    }
   }
+  
+  // contentスライドでpoints配列が空の場合の警告と自動生成
+  if (!isAgenda && (!points || points.length === 0)) {
+    console.warn("⚠️ contentスライドでpoints配列が空です。デフォルトを生成します。");
+    points = [
+      `${data.title}について`,
+      '重要なポイント',
+      '考慮すべき要素'
+    ];
+    console.log("📝 デフォルトpoints配列を生成:", points);
+  }
+  
+  console.log("✅ 最終的なpoints配列:", points);
   
   const hasImages = Array.isArray(data.images) && data.images.length > 0;
   const isTwo = !!(data.twoColumn || data.columns);
@@ -1182,10 +1266,62 @@ function isAgendaTitle(title) {
   return /(agenda|アジェンダ|あじぇんだ|本日の流れ)/.test(t);
 }
 
+// グローバル変数：現在処理中のslideData
+let _globalSlideData = [];
+
 function buildAgendaFromSlideData() {
-  // 未実装: slideDataからアジェンダを自動生成する
-  // 全スライドのタイトルを収集してリスト化する想定
-  return [];
+  console.log("📋 アジェンダ自動生成開始...");
+  
+  // グローバル変数からslideDataを取得
+  const slideData = _globalSlideData;
+  console.log("🔍 アジェンダ用slideData取得:", {
+    total: slideData.length,
+    types: slideData.map(s => s.type)
+  });
+  
+  let agendaItems = [];
+  
+  if (slideData.length > 0) {
+    // 1. まずsection.titleを収集
+    agendaItems = slideData
+      .filter(s => s.type === 'section')
+      .map(s => s.title)
+      .filter(title => title && title.trim())
+      .slice(0, 5); // 最大5項目
+      
+    console.log("📝 sectionタイトルから生成:", agendaItems);
+    
+    // 2. sectionが見つからない場合は、contentスライドのタイトルを使用
+    if (agendaItems.length === 0) {
+      agendaItems = slideData
+        .filter(s => s.type === 'content' && !isAgendaTitle(s.title || ''))
+        .map(s => s.title)
+        .filter(title => title && title.trim())
+        .slice(0, 5); // 最大5項目
+        
+      console.log("📝 contentタイトルから生成:", agendaItems);
+    }
+    
+    // 3. その他のスライドタイプからも収集
+    if (agendaItems.length === 0) {
+      agendaItems = slideData
+        .filter(s => ['compare', 'process', 'timeline', 'diagram', 'cards', 'table', 'progress'].includes(s.type))
+        .map(s => s.title)
+        .filter(title => title && title.trim())
+        .slice(0, 5); // 最大5項目
+        
+      console.log("📝 その他スライドタイトルから生成:", agendaItems);
+    }
+  }
+  
+  // それでも空の場合はデフォルトのアジェンダを生成
+  if (agendaItems.length === 0) {
+    agendaItems = ['本日の目的', '重要なポイント', '次のステップ'];
+    console.log("📝 デフォルトアジェンダを生成:", agendaItems);
+  }
+  
+  console.log("✅ アジェンダ自動生成完了:", agendaItems);
+  return agendaItems;
 }
 
 function drawArrowBetweenRects(slide, a, b, arrowH, arrowGap) {

@@ -12,31 +12,147 @@ function doGet() {
 }
 
 /**
- * スライド生成（単一路線）
- * - callGemini.gs の構造化出力で slideData(JSON) を生成
- * - majin_slide_generator.gs で Google スライドに変換
+ * スライド生成（SPEC.md準拠）
+ * @param {Object} form - フォームデータ（prompt, generateOptionなど）
+ * @returns {Object} { presentationId, url }
  */
-function mainTest(prompt, generateOption) {
+function runGeneration(form) {
   try {
-    Logger.log(`スライド生成開始: ${prompt}`);
+    console.log("=== スライド生成メインプロセス開始 ===");
+    console.log("📝 フォームデータ:", form);
+    Logger.log(`スライド生成開始: ${JSON.stringify(form)}`);
 
-    const expandedPrompt = buildTestPrompt(prompt, generateOption);
+    const expandedPrompt = buildTestPrompt(form.prompt, form.generateOption);
+    console.log("🔄 展開済みプロンプト:", expandedPrompt);
 
-    // Gemini 構造化出力で slideData(JSON配列) を生成
-    const slideData = generateSlideDataWithGemini(
-      expandedPrompt,
-      getSlideDataSchema()
-    );
+    // 1) slideData（配列）を取得
+    console.log("🤖 Gemini API呼び出し開始...");
+    const data = generateSlideDataWithGemini(expandedPrompt);
+    const slideData = typeof data === "string" ? JSON.parse(data) : data;
+    
+    console.log("✅ slideData生成完了");
+    console.log("📊 slideData分析:", {
+      スライド数: slideData.length,
+      スライドタイプ: slideData.map(s => s.type),
+      各スライド詳細: slideData.map((s, i) => ({
+        index: i + 1,
+        type: s.type,
+        title: s.title || 'N/A',
+        hasNotes: !!s.notes,
+        hasPoints: !!s.points,
+        pointsCount: Array.isArray(s.points) ? s.points.length : 0
+      }))
+    });
 
-    // Google スライドに変換
+    // 2) 最低限のスキーマ検証
+    console.log("🔍 slideDataの検証開始...");
+    validateSlideData_(slideData);
+    console.log("✅ slideData検証完了");
+
+    // 3) スライド描画
+    console.log("🎨 Google スライド生成開始...");
     const presentationUrl = generateSlideFromJson(slideData);
-
+    
+    // SPEC.mdに合わせた戻り値形式
+    const result = {
+      presentationId: extractPresentationIdFromUrl(presentationUrl),
+      url: presentationUrl
+    };
+    
+    console.log("✨ スライド生成完了!");
+    console.log("🔗 結果:", result);
     Logger.log(`スライド生成完了: ${presentationUrl}`);
-    return presentationUrl;
+    return result;
   } catch (error) {
+    console.error("💥 スライド生成エラー:", error);
+    console.error("📋 エラー詳細:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
     Logger.log(`スライド生成エラー: ${error.message}`);
     throw new Error(`スライド生成に失敗しました: ${error.message}`);
   }
+}
+
+/**
+ * 後方互換性のための旧関数名エイリアス
+ */
+function mainTest(prompt, generateOption) {
+  return runGeneration({ prompt, generateOption });
+}
+
+/**
+ * slideDataの最低限の検証
+ * @param {Array} arr - slideData配列
+ */
+function validateSlideData_(arr) {
+  console.log("🔍 slideData検証開始:", arr);
+  
+  if (!Array.isArray(arr) || arr.length === 0) {
+    console.error("❌ slideDataが空または配列ではありません:", arr);
+    throw new Error("Invalid slideData: empty or not an array.");
+  }
+  
+  arr.forEach((s, i) => {
+    console.log(`📋 スライド ${i + 1} 検証:`, {
+      type: s.type,
+      hasTitle: !!s.title,
+      hasRequiredFields: checkRequiredFields(s)
+    });
+    
+    if (!s.type) {
+      console.error(`❌ スライド ${i + 1}: typeが不足`, s);
+      throw new Error(`slide[${i}]: missing type`);
+    }
+    
+    if (s.type !== "closing" && !s.title) {
+      console.error(`❌ スライド ${i + 1}: titleが不足`, s);
+      throw new Error(`slide[${i}]: missing title`);
+    }
+    
+    if (s.images && s.images.length > 6) {
+      console.warn(`⚠️ スライド ${i + 1}: 画像数が上限を超過 (${s.images.length} > 6)`);
+      throw new Error(`slide[${i}]: too many images (${s.images.length} > 6)`);
+    }
+
+    // contentスライドの特別な検証
+    if (s.type === "content" && Array.isArray(s.points) && s.points.length === 0) {
+      console.warn(`⚠️ スライド ${i + 1}: contentスライドのpoints配列が空です`);
+    }
+  });
+  
+  console.log("✅ slideData検証完了: すべてのスライドが有効です");
+}
+
+/**
+ * スライドタイプ別の必須フィールドをチェック
+ */
+function checkRequiredFields(slide) {
+  const requiredFields = {
+    title: ['type', 'title'],
+    section: ['type', 'title'],
+    content: ['type', 'title'],
+    compare: ['type', 'title', 'leftTitle', 'rightTitle', 'leftItems', 'rightItems'],
+    process: ['type', 'title', 'steps'],
+    timeline: ['type', 'title', 'milestones'],
+    diagram: ['type', 'title', 'lanes'],
+    cards: ['type', 'title', 'items'],
+    table: ['type', 'title', 'headers', 'rows'],
+    progress: ['type', 'title', 'items'],
+    closing: ['type']
+  };
+  
+  const required = requiredFields[slide.type] || ['type'];
+  return required.every(field => slide.hasOwnProperty(field));
+}
+
+/**
+ * URLからプレゼンテーションIDを抽出
+ */
+function extractPresentationIdFromUrl(url) {
+  const match = url.match(/\/presentation\/d\/([a-zA-Z0-9-_]+)/);
+  return match ? match[1] : null;
 }
 
 /**
