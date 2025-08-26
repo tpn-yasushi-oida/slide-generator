@@ -391,7 +391,7 @@ b. カスタム生成の場合
           showCustomAlert("スライド生成が完了しました！");
           // リンクを更新
           if (linkButton) {
-            linkButton.onclick = () => window.open(response, "_blank"); // リンクをGoogle Apps Scriptの結果に設定
+            linkButton.onclick = () => window.open(response.url, "_blank"); // リンクをGoogle Apps Scriptの結果に設定
             linkButton.style.display = "inline-flex";
           }
         })
