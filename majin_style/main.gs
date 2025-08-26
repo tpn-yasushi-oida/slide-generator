@@ -29,19 +29,19 @@ function runGeneration(form) {
     console.log("🤖 Gemini API呼び出し開始...");
     const data = generateSlideDataWithGemini(expandedPrompt);
     const slideData = typeof data === "string" ? JSON.parse(data) : data;
-    
+
     console.log("✅ slideData生成完了");
     console.log("📊 slideData分析:", {
       スライド数: slideData.length,
-      スライドタイプ: slideData.map(s => s.type),
+      スライドタイプ: slideData.map((s) => s.type),
       各スライド詳細: slideData.map((s, i) => ({
         index: i + 1,
         type: s.type,
-        title: s.title || 'N/A',
+        title: s.title || "N/A",
         hasNotes: !!s.notes,
         hasPoints: !!s.points,
-        pointsCount: Array.isArray(s.points) ? s.points.length : 0
-      }))
+        pointsCount: Array.isArray(s.points) ? s.points.length : 0,
+      })),
     });
 
     // 2) 最低限のスキーマ検証
@@ -52,13 +52,13 @@ function runGeneration(form) {
     // 3) スライド描画
     console.log("🎨 Google スライド生成開始...");
     const presentationUrl = generateSlideFromJson(slideData);
-    
+
     // SPEC.mdに合わせた戻り値形式
     const result = {
       presentationId: extractPresentationIdFromUrl(presentationUrl),
-      url: presentationUrl
+      url: presentationUrl,
     };
-    
+
     console.log("✨ スライド生成完了!");
     console.log("🔗 結果:", result);
     Logger.log(`スライド生成完了: ${presentationUrl}`);
@@ -68,19 +68,14 @@ function runGeneration(form) {
     console.error("📋 エラー詳細:", {
       message: error.message,
       stack: error.stack,
-      name: error.name
+      name: error.name,
     });
     Logger.log(`スライド生成エラー: ${error.message}`);
     throw new Error(`スライド生成に失敗しました: ${error.message}`);
   }
 }
 
-/**
- * 後方互換性のための旧関数名エイリアス
- */
-function mainTest(prompt, generateOption) {
-  return runGeneration({ prompt, generateOption });
-}
+
 
 /**
  * slideDataの最低限の検証
@@ -88,40 +83,46 @@ function mainTest(prompt, generateOption) {
  */
 function validateSlideData_(arr) {
   console.log("🔍 slideData検証開始:", arr);
-  
+
   if (!Array.isArray(arr) || arr.length === 0) {
     console.error("❌ slideDataが空または配列ではありません:", arr);
     throw new Error("Invalid slideData: empty or not an array.");
   }
-  
+
   arr.forEach((s, i) => {
     console.log(`📋 スライド ${i + 1} 検証:`, {
       type: s.type,
       hasTitle: !!s.title,
-      hasRequiredFields: checkRequiredFields(s)
+      hasRequiredFields: checkRequiredFields(s),
     });
-    
+
     if (!s.type) {
       console.error(`❌ スライド ${i + 1}: typeが不足`, s);
       throw new Error(`slide[${i}]: missing type`);
     }
-    
+
     if (s.type !== "closing" && !s.title) {
       console.error(`❌ スライド ${i + 1}: titleが不足`, s);
       throw new Error(`slide[${i}]: missing title`);
     }
-    
+
     if (s.images && s.images.length > 6) {
-      console.warn(`⚠️ スライド ${i + 1}: 画像数が上限を超過 (${s.images.length} > 6)`);
+      console.warn(
+        `⚠️ スライド ${i + 1}: 画像数が上限を超過 (${s.images.length} > 6)`
+      );
       throw new Error(`slide[${i}]: too many images (${s.images.length} > 6)`);
     }
 
     // contentスライドの特別な検証
-    if (s.type === "content" && Array.isArray(s.points) && s.points.length === 0) {
+    if (
+      s.type === "content" &&
+      Array.isArray(s.points) &&
+      s.points.length === 0
+    ) {
       console.warn(`⚠️ スライド ${i + 1}: contentスライドのpoints配列が空です`);
     }
   });
-  
+
   console.log("✅ slideData検証完了: すべてのスライドが有効です");
 }
 
@@ -130,21 +131,28 @@ function validateSlideData_(arr) {
  */
 function checkRequiredFields(slide) {
   const requiredFields = {
-    title: ['type', 'title'],
-    section: ['type', 'title'],
-    content: ['type', 'title'],
-    compare: ['type', 'title', 'leftTitle', 'rightTitle', 'leftItems', 'rightItems'],
-    process: ['type', 'title', 'steps'],
-    timeline: ['type', 'title', 'milestones'],
-    diagram: ['type', 'title', 'lanes'],
-    cards: ['type', 'title', 'items'],
-    table: ['type', 'title', 'headers', 'rows'],
-    progress: ['type', 'title', 'items'],
-    closing: ['type']
+    title: ["type", "title"],
+    section: ["type", "title"],
+    content: ["type", "title"],
+    compare: [
+      "type",
+      "title",
+      "leftTitle",
+      "rightTitle",
+      "leftItems",
+      "rightItems",
+    ],
+    process: ["type", "title", "steps"],
+    timeline: ["type", "title", "milestones"],
+    diagram: ["type", "title", "lanes"],
+    cards: ["type", "title", "items"],
+    table: ["type", "title", "headers", "rows"],
+    progress: ["type", "title", "items"],
+    closing: ["type"],
   };
-  
-  const required = requiredFields[slide.type] || ['type'];
-  return required.every(field => slide.hasOwnProperty(field));
+
+  const required = requiredFields[slide.type] || ["type"];
+  return required.every((field) => slide.hasOwnProperty(field));
 }
 
 /**
@@ -165,7 +173,7 @@ function buildTestPrompt(prompt, generateOption) {
     today.getMonth() + 1
   ).padStart(2, "0")}.${String(today.getDate()).padStart(2, "0")}`;
 
-  const userContent =
+  const userContent = 
     `【入力テキスト】\n${prompt}\n\n` +
     `【追加要望】${generateOption || "なし"}\n` +
     `【生成日】${dateStr}`;
@@ -202,4 +210,20 @@ function outputLog(prompt, generateOption, buttonId) {
  */
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+/**
+ * runGenerationのテスト関数
+ */
+function testRunGeneration() {
+  const testForm = {
+    prompt: "AIについてのプレゼンテーション",
+    generateOption: "スライド5枚で、初心者向けに分かりやすく",
+  };
+  try {
+    const result = runGeneration(testForm);
+    console.log("テスト成功:", result);
+  } catch (e) {
+    console.error("テスト失敗:", e);
+  }
 }
