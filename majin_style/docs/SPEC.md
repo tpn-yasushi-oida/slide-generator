@@ -1,7 +1,3 @@
-了解。**フロント案**と**callGemini の実装詳細**は含めず、ブログ準拠で**マスタープロンプトは原文どおり**に据えた仕様書を出します（プロンプトの構造・強調は一切変更しません）。
-
----
-
 # Google スライド自動生成（GAS Web アプリ）仕様書
 
 > 目的：ブログのフロー（**AI は“slideData”のみ生成／描画は GAS 固定ロジック**）を、**単回呼び出し**で Web アプリに移植する。
@@ -44,7 +40,7 @@ flowchart LR
   D -- "presentationId / URL" --> B
   B -- "結果返却" --> A
 
-  Note["注記:<br/>Gemini返却はJSON文字列。main.gsでJSON.parseしてslideData配列へ。<br/>外部Presentations/Drive APIは使用せず、GAS標準機能で出力。<br/>出力処理の細部は @legacy\\main.gs を参考に実装。"]
+  Note["注記:<br/>Gemini返却はJSON文字列。main.gsでJSON.parseしてslideData配列へ。<br/>外部Presentations/Drive APIは未使用。<br/>出力処理の細部は @legacy\\main.gs を参照。"]
   D -. 参照 .-> Note
 
 
@@ -72,6 +68,15 @@ flowchart LR
 2. **【ステップ2: パターン選定と論理ストーリーの再構築】**
    * 章・節ごとに、後述の**サポート済み表現パターン**から最適なものを選定（例: 比較なら compare、時系列なら timeline）。
    * 聞き手に最適な**説得ライン**（問題解決型、PREP法、時系列など）へ再配列。
+   * **【パターン判定ヒューリスティクス（促進）】**
+     * **compare**: 「vs / 比較 / 対比 / メリット・デメリット / 長所・短所 / 左右で並列」などの語や構造がある場合
+     * **process**: 「手順 / 工程 / フロー / STEP / 1. 2. 3. / →で連鎖」など段階列挙の痕跡がある場合
+     * **timeline**: 「YYYY-MM / YYYY年 / Q1〜Q4 / スケジュール / ロードマップ / 期日」など日時・時系列語が多い場合
+     * **diagram**: 「関係 / 体系 / 構成 / 依存 / 連携 / データフロー」など関係性整理が主題の場合
+     * **cards**: 同型フォーマットの項目が多数（例: 機能一覧・事例集・メンバー紹介等）で2〜3列配置が適する場合
+     * **table**: 列・行のマトリクス（CSV/TSV様式、ヘッダ＋複数行）や比較表が自然な場合
+     * **progress**: 進捗・達成率（%）・ステータス（done/next/todo）指標が主題の場合
+     * **content** は**他のいずれにも該当しない場合のフォールバック**とする
 3. **【ステップ3: スライドタイプへのマッピング】**
    * ストーリー要素を **Googleパターン・スキーマ**に**最適割当**。
    * 表紙 → title / 章扉 → section（※背景に**半透明の大きな章番号**を描画） / 本文 → content, compare, process, timeline, diagram, cards, table, progress / 結び → closing
@@ -91,9 +96,9 @@ flowchart LR
      * notesプロパティが各スライドに適切に設定されているか確認
      * title.dateはYYYY.MM.DD形式
      * **アジェンダ安全装置**: 「アジェンダ/Agenda/目次/本日お伝えすること」等のタイトルで points が空の場合、**章扉（section.title）から自動生成**するため、空配列を返さず **ダミー3点**以上を必ず生成
-6. **【ステップ6: 最終出力】**
-* 検証済みオブジェクトを論理順に **slideData = [ ... ] にそのまま代入可能な形の _JSON配列_** として**のみ**出力すること。
-* **コード（.gs など）やテンプレ全文、解説・前置き・後書きは一切出力しない。** 出力は**JSON配列のみ**とする。
+     * **多様性安全装置**: 本文スライドのうち **content が全体の70%を超える**場合、
+       上記ヒューリスティクスに基づいて **compare/process/timeline/diagram/cards/table/progress** への
+       再割当を試行する（該当シグナルがある限り content への安易なフォールバックを禁止）
 
 ## **3.0 slideDataスキーマ定義（GooglePatternVer.+SpeakerNotes）**
 
@@ -147,15 +152,16 @@ flowchart LR
 * フォント: Arial が無い環境では標準サンセリフに自動フォールバック
 * 文字列リテラルの安全性: ' と \\ を確実にエスケープ
 
+*（任意）各スライドには **classifier** メタを付与してよい：
+  '{ classifier: { signals: string[], rationale: string, confidence: number(0-1) } }'
+  * signals: 判定根拠となった語や構造（例: ["vs","メリデメ","左右並列"] など）
+  * rationale: なぜその type を選んだかの短い理由
+  * confidence: 選定の自信度*
+
 ## **6.0 OUTPUT_FORMAT — 最終出力形式**
 
 * 出力は **slideData の _JSON配列_ のみ** とし、**そのまま const slideData = [...] に代入可能**な形で返すこと。
 * **コード断片やテンプレ全文、前置き/解説/謝辞/補足は一切含めない。** 出力は**JSON配列のみ**とする。
-
-
-
-
-
 
 ```
 
@@ -170,85 +176,142 @@ flowchart LR
 
 ```json
 {
-  "type": "array",
+  "type": "ARRAY",
   "title": "slideData",
   "items": {
-    "type": "object",
-    "oneOf": [
+    "anyOf": [
       {
+        "type": "OBJECT",
+        "description": "表紙スライド",
         "properties": {
-          "type": { "const": "title" },
-          "title": { "type": "string" },
-          "date": { "type": "string", "pattern": "^\\d{4}\\.\\d{2}\\.\\d{2}$" },
-          "notes": { "type": "string" }
+          "type": { "type": "STRING", "enum": ["title"] },
+          "title": { "type": "STRING" },
+          "date": { "type": "STRING" },
+          "notes": { "type": "STRING" },
+          "classifier": {
+            "type": "OBJECT",
+            "properties": {
+              "signals": { "type": "ARRAY", "items": { "type": "STRING" } },
+              "rationale": { "type": "STRING" },
+              "confidence": { "type": "NUMBER" }
+            }
+          }
         },
-        "required": ["type", "title", "date"]
+        "required": ["type", "title", "date"],
+        "propertyOrdering": ["type", "title", "date", "notes", "classifier"]
       },
       {
+        "type": "OBJECT",
+        "description": "章扉",
         "properties": {
-          "type": { "const": "section" },
-          "title": { "type": "string" },
-          "sectionNo": { "type": "number" },
-          "notes": { "type": "string" }
+          "type": { "type": "STRING", "enum": ["section"] },
+          "title": { "type": "STRING" },
+          "sectionNo": { "type": "INTEGER" },
+          "notes": { "type": "STRING" },
+          "classifier": {
+            "type": "OBJECT",
+            "properties": {
+              "signals": { "type": "ARRAY", "items": { "type": "STRING" } },
+              "rationale": { "type": "STRING" },
+              "confidence": { "type": "NUMBER" }
+            }
+          }
         },
-        "required": ["type", "title"]
+        "required": ["type", "title"],
+        "propertyOrdering": [
+          "type",
+          "title",
+          "sectionNo",
+          "notes",
+          "classifier"
+        ]
       },
       {
+        "type": "OBJECT",
+        "description": "クロージング",
         "properties": {
-          "type": { "const": "closing" },
-          "notes": { "type": "string" }
+          "type": { "type": "STRING", "enum": ["closing"] },
+          "notes": { "type": "STRING" },
+          "classifier": {
+            "type": "OBJECT",
+            "properties": {
+              "signals": { "type": "ARRAY", "items": { "type": "STRING" } },
+              "rationale": { "type": "STRING" },
+              "confidence": { "type": "NUMBER" }
+            }
+          }
         },
-        "required": ["type"]
+        "required": ["type"],
+        "propertyOrdering": ["type", "notes", "classifier"]
       },
       {
+        "type": "OBJECT",
+        "description": "汎用コンテンツ（※他型に該当しない場合のフォールバック）",
         "properties": {
-          "type": { "const": "content" },
-          "title": { "type": "string" },
-          "subhead": { "type": "string" },
-          "points": { "type": "array", "items": { "type": "string" } },
-          "twoColumn": { "type": "boolean" },
+          "type": { "type": "STRING", "enum": ["content"] },
+          "title": { "type": "STRING" },
+          "subhead": { "type": "STRING" },
+          "points": { "type": "ARRAY", "items": { "type": "STRING" } },
+          "twoColumn": { "type": "BOOLEAN" },
           "columns": {
-            "type": "array",
-            "items": { "type": "array", "items": { "type": "string" } },
-            "minItems": 2,
-            "maxItems": 2
+            "type": "ARRAY",
+            "items": { "type": "ARRAY", "items": { "type": "STRING" } }
           },
           "images": {
-            "type": "array",
-            "maxItems": 6,
+            "type": "ARRAY",
             "items": {
-              "oneOf": [
-                { "type": "string" },
-                {
-                  "type": "object",
-                  "properties": {
-                    "url": { "type": "string" },
-                    "caption": { "type": "string" }
-                  },
-                  "required": ["url"]
-                }
-              ]
+              "type": "OBJECT",
+              "properties": {
+                "url": { "type": "STRING" },
+                "caption": { "type": "STRING" }
+              },
+              "required": ["url"]
             }
           },
-          "notes": { "type": "string" }
+          "notes": { "type": "STRING" },
+          "classifier": {
+            "type": "OBJECT",
+            "properties": {
+              "signals": { "type": "ARRAY", "items": { "type": "STRING" } },
+              "rationale": { "type": "STRING" },
+              "confidence": { "type": "NUMBER" }
+            }
+          }
         },
-        "required": ["type", "title"]
+        "required": ["type", "title"],
+        "propertyOrdering": [
+          "type",
+          "title",
+          "subhead",
+          "points",
+          "twoColumn",
+          "columns",
+          "images",
+          "notes",
+          "classifier"
+        ]
       },
       {
+        "type": "OBJECT",
+        "description": "対比（vs/比較/メリデメなどの信号があるときに選択）",
         "properties": {
-          "type": { "const": "compare" },
-          "title": { "type": "string" },
-          "subhead": { "type": "string" },
-          "leftTitle": { "type": "string" },
-          "rightTitle": { "type": "string" },
-          "leftItems": { "type": "array", "items": { "type": "string" } },
-          "rightItems": { "type": "array", "items": { "type": "string" } },
-          "images": {
-            "type": "array",
-            "items": { "type": "string" },
-            "maxItems": 6
-          },
-          "notes": { "type": "string" }
+          "type": { "type": "STRING", "enum": ["compare"] },
+          "title": { "type": "STRING" },
+          "subhead": { "type": "STRING" },
+          "leftTitle": { "type": "STRING" },
+          "rightTitle": { "type": "STRING" },
+          "leftItems": { "type": "ARRAY", "items": { "type": "STRING" } },
+          "rightItems": { "type": "ARRAY", "items": { "type": "STRING" } },
+          "images": { "type": "ARRAY", "items": { "type": "STRING" } },
+          "notes": { "type": "STRING" },
+          "classifier": {
+            "type": "OBJECT",
+            "properties": {
+              "signals": { "type": "ARRAY", "items": { "type": "STRING" } },
+              "rationale": { "type": "STRING" },
+              "confidence": { "type": "NUMBER" }
+            }
+          }
         },
         "required": [
           "type",
@@ -257,138 +320,253 @@ flowchart LR
           "rightTitle",
           "leftItems",
           "rightItems"
+        ],
+        "propertyOrdering": [
+          "type",
+          "title",
+          "subhead",
+          "leftTitle",
+          "rightTitle",
+          "leftItems",
+          "rightItems",
+          "images",
+          "notes",
+          "classifier"
         ]
       },
       {
+        "type": "OBJECT",
+        "description": "工程/手順（STEP/1.2.3.やフローの信号）",
         "properties": {
-          "type": { "const": "process" },
-          "title": { "type": "string" },
-          "subhead": { "type": "string" },
-          "steps": { "type": "array", "items": { "type": "string" } },
-          "images": {
-            "type": "array",
-            "items": { "type": "string" },
-            "maxItems": 6
-          },
-          "notes": { "type": "string" }
+          "type": { "type": "STRING", "enum": ["process"] },
+          "title": { "type": "STRING" },
+          "subhead": { "type": "STRING" },
+          "steps": { "type": "ARRAY", "items": { "type": "STRING" } },
+          "images": { "type": "ARRAY", "items": { "type": "STRING" } },
+          "notes": { "type": "STRING" },
+          "classifier": {
+            "type": "OBJECT",
+            "properties": {
+              "signals": { "type": "ARRAY", "items": { "type": "STRING" } },
+              "rationale": { "type": "STRING" },
+              "confidence": { "type": "NUMBER" }
+            }
+          }
         },
-        "required": ["type", "title", "steps"]
+        "required": ["type", "title", "steps"],
+        "propertyOrdering": [
+          "type",
+          "title",
+          "subhead",
+          "steps",
+          "images",
+          "notes",
+          "classifier"
+        ]
       },
       {
+        "type": "OBJECT",
+        "description": "時系列（年月/四半期/ロードマップ等の信号）",
         "properties": {
-          "type": { "const": "timeline" },
-          "title": { "type": "string" },
-          "subhead": { "type": "string" },
+          "type": { "type": "STRING", "enum": ["timeline"] },
+          "title": { "type": "STRING" },
+          "subhead": { "type": "STRING" },
           "milestones": {
-            "type": "array",
+            "type": "ARRAY",
             "items": {
-              "type": "object",
+              "type": "OBJECT",
               "properties": {
-                "label": { "type": "string" },
-                "date": { "type": "string" },
-                "state": { "type": "string", "enum": ["done", "next", "todo"] }
+                "label": { "type": "STRING" },
+                "date": { "type": "STRING" },
+                "state": { "type": "STRING", "enum": ["done", "next", "todo"] }
               },
-              "required": ["label", "date"]
+              "required": ["label", "date"],
+              "propertyOrdering": ["label", "date", "state"]
             }
           },
-          "images": {
-            "type": "array",
-            "items": { "type": "string" },
-            "maxItems": 6
-          },
-          "notes": { "type": "string" }
+          "images": { "type": "ARRAY", "items": { "type": "STRING" } },
+          "notes": { "type": "STRING" },
+          "classifier": {
+            "type": "OBJECT",
+            "properties": {
+              "signals": { "type": "ARRAY", "items": { "type": "STRING" } },
+              "rationale": { "type": "STRING" },
+              "confidence": { "type": "NUMBER" }
+            }
+          }
         },
-        "required": ["type", "title", "milestones"]
+        "required": ["type", "title", "milestones"],
+        "propertyOrdering": [
+          "type",
+          "title",
+          "subhead",
+          "milestones",
+          "images",
+          "notes",
+          "classifier"
+        ]
       },
       {
+        "type": "OBJECT",
+        "description": "レーン図（関係/構成/依存/連携の信号）",
         "properties": {
-          "type": { "const": "diagram" },
-          "title": { "type": "string" },
-          "subhead": { "type": "string" },
+          "type": { "type": "STRING", "enum": ["diagram"] },
+          "title": { "type": "STRING" },
+          "subhead": { "type": "STRING" },
           "lanes": {
-            "type": "array",
+            "type": "ARRAY",
             "items": {
-              "type": "object",
+              "type": "OBJECT",
               "properties": {
-                "title": { "type": "string" },
-                "items": { "type": "array", "items": { "type": "string" } }
+                "title": { "type": "STRING" },
+                "items": { "type": "ARRAY", "items": { "type": "STRING" } }
               },
-              "required": ["title", "items"]
+              "required": ["title", "items"],
+              "propertyOrdering": ["title", "items"]
             }
           },
-          "images": {
-            "type": "array",
-            "items": { "type": "string" },
-            "maxItems": 6
-          },
-          "notes": { "type": "string" }
+          "images": { "type": "ARRAY", "items": { "type": "STRING" } },
+          "notes": { "type": "STRING" },
+          "classifier": {
+            "type": "OBJECT",
+            "properties": {
+              "signals": { "type": "ARRAY", "items": { "type": "STRING" } },
+              "rationale": { "type": "STRING" },
+              "confidence": { "type": "NUMBER" }
+            }
+          }
         },
-        "required": ["type", "title", "lanes"]
+        "required": ["type", "title", "lanes"],
+        "propertyOrdering": [
+          "type",
+          "title",
+          "subhead",
+          "lanes",
+          "images",
+          "notes",
+          "classifier"
+        ]
       },
       {
+        "type": "OBJECT",
+        "description": "カードグリッド（同型の要素が多数：機能一覧/事例/メンバー）",
         "properties": {
-          "type": { "const": "cards" },
-          "title": { "type": "string" },
-          "subhead": { "type": "string" },
-          "columns": { "type": "integer", "enum": [2, 3] },
+          "type": { "type": "STRING", "enum": ["cards"] },
+          "title": { "type": "STRING" },
+          "subhead": { "type": "STRING" },
+          "columnsCount": {
+            "type": "INTEGER",
+            "description": "2 または 3 を推奨"
+          },
           "items": {
-            "type": "array",
+            "type": "ARRAY",
             "items": {
-              "oneOf": [
-                { "type": "string" },
-                {
-                  "type": "object",
-                  "properties": {
-                    "title": { "type": "string" },
-                    "desc": { "type": "string" }
-                  },
-                  "required": ["title"]
-                }
-              ]
+              "type": "OBJECT",
+              "properties": {
+                "title": { "type": "STRING" },
+                "desc": { "type": "STRING" }
+              },
+              "required": ["title"],
+              "propertyOrdering": ["title", "desc"]
             }
           },
-          "images": {
-            "type": "array",
-            "items": { "type": "string" },
-            "maxItems": 6
-          },
-          "notes": { "type": "string" }
+          "images": { "type": "ARRAY", "items": { "type": "STRING" } },
+          "notes": { "type": "STRING" },
+          "classifier": {
+            "type": "OBJECT",
+            "properties": {
+              "signals": { "type": "ARRAY", "items": { "type": "STRING" } },
+              "rationale": { "type": "STRING" },
+              "confidence": { "type": "NUMBER" }
+            }
+          }
         },
-        "required": ["type", "title", "items"]
+        "required": ["type", "title", "items"],
+        "propertyOrdering": [
+          "type",
+          "title",
+          "subhead",
+          "columnsCount",
+          "items",
+          "images",
+          "notes",
+          "classifier"
+        ]
       },
       {
+        "type": "OBJECT",
+        "description": "表（マトリクスや比較表が自然なとき）",
         "properties": {
-          "type": { "const": "table" },
-          "title": { "type": "string" },
-          "subhead": { "type": "string" },
-          "headers": { "type": "array", "items": { "type": "string" } },
+          "type": { "type": "STRING", "enum": ["table"] },
+          "title": { "type": "STRING" },
+          "subhead": { "type": "STRING" },
+          "headers": { "type": "ARRAY", "items": { "type": "STRING" } },
           "rows": {
-            "type": "array",
-            "items": { "type": "array", "items": { "type": "string" } }
+            "type": "ARRAY",
+            "items": { "type": "ARRAY", "items": { "type": "STRING" } }
           },
-          "notes": { "type": "string" }
+          "notes": { "type": "STRING" },
+          "classifier": {
+            "type": "OBJECT",
+            "properties": {
+              "signals": { "type": "ARRAY", "items": { "type": "STRING" } },
+              "rationale": { "type": "STRING" },
+              "confidence": { "type": "NUMBER" }
+            }
+          }
         },
-        "required": ["type", "title", "headers", "rows"]
+        "required": ["type", "title", "headers", "rows"],
+        "propertyOrdering": [
+          "type",
+          "title",
+          "subhead",
+          "headers",
+          "rows",
+          "notes",
+          "classifier"
+        ]
       },
       {
+        "type": "OBJECT",
+        "description": "進捗（%・ステータスの信号）",
         "properties": {
-          "type": { "const": "progress" },
-          "title": { "type": "string" },
-          "subhead": { "type": "string" },
+          "type": { "type": "STRING", "enum": ["progress"] },
+          "title": { "type": "STRING" },
+          "subhead": { "type": "STRING" },
           "items": {
-            "type": "array",
+            "type": "ARRAY",
             "items": {
-              "type": "object",
+              "type": "OBJECT",
               "properties": {
-                "label": { "type": "string" },
-                "percent": { "type": "number", "minimum": 0, "maximum": 100 }
+                "label": { "type": "STRING" },
+                "percent": {
+                  "type": "NUMBER",
+                  "description": "0〜100（範囲は説明のみで緩く拘束）"
+                }
               },
-              "required": ["label", "percent"]
+              "required": ["label", "percent"],
+              "propertyOrdering": ["label", "percent"]
             }
           },
-          "notes": { "type": "string" }
+          "notes": { "type": "STRING" },
+          "classifier": {
+            "type": "OBJECT",
+            "properties": {
+              "signals": { "type": "ARRAY", "items": { "type": "STRING" } },
+              "rationale": { "type": "STRING" },
+              "confidence": { "type": "NUMBER" }
+            }
+          }
         },
-        "required": ["type", "title", "items"]
+        "required": ["type", "title", "items"],
+        "propertyOrdering": [
+          "type",
+          "title",
+          "subhead",
+          "items",
+          "notes",
+          "classifier"
+        ]
       }
     ]
   }

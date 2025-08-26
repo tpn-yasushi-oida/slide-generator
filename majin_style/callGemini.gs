@@ -99,7 +99,7 @@ function generateSlideDataWithGemini(userPrompt) {
     // プロンプト作成
     const fullPrompt = getGeminiPrompt() + "\n\n" + userPrompt;
     const responseSchema = getSlideDataSchema();
-    
+
     console.log("🎯 最終プロンプト:", fullPrompt);
     console.log("📋 JSONスキーマ:", JSON.stringify(responseSchema, null, 2));
 
@@ -163,8 +163,8 @@ function callGeminiVertexAI(userPrompt, responseSchema) {
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: responseSchema,
-        temperature: 0.7,
-        topP: 0.9,
+        temperature: 0.2,
+        topP: 0.6,
         topK: 40,
       },
     };
@@ -172,21 +172,20 @@ function callGeminiVertexAI(userPrompt, responseSchema) {
     console.log("📤 Vertex AI: リクエスト送信中...", {
       endpoint,
       requestBodySize: JSON.stringify(requestBody).length,
-      generationConfig: requestBody.generationConfig
+      generationConfig: requestBody.generationConfig,
     });
 
     const response = UrlFetchApp.fetch(endpoint, {
       method: "POST",
       contentType: "application/json",
-      headers: {
-        Authorization: "Bearer " + token,
-      },
+      headers: { Authorization: "Bearer " + token },
       payload: JSON.stringify(requestBody),
+      muteHttpExceptions: true,
     });
 
     console.log("📥 Vertex AI: レスポンス受信", {
       statusCode: response.getResponseCode(),
-      responseSize: response.getContentText().length
+      responseSize: response.getContentText().length,
     });
 
     if (response.getResponseCode() !== 200) {
@@ -213,7 +212,7 @@ function callGeminiVertexAI(userPrompt, responseSchema) {
 
     const slideDataJson = content.parts[0].text;
     console.log("📄 Vertex AI: 生のJSONレスポンス:", slideDataJson);
-    
+
     const slideData = JSON.parse(slideDataJson);
     console.log("✨ Vertex AI: パース済みslideData:", slideData);
 
@@ -265,7 +264,7 @@ function callGeminiDirectAPI(userPrompt, responseSchema) {
     console.log("📤 Direct API: リクエスト送信中...", {
       endpoint,
       requestBodySize: JSON.stringify(requestBody).length,
-      generationConfig: requestBody.generationConfig
+      generationConfig: requestBody.generationConfig,
     });
 
     const response = UrlFetchApp.fetch(endpoint, {
@@ -279,7 +278,7 @@ function callGeminiDirectAPI(userPrompt, responseSchema) {
 
     console.log("📥 Direct API: レスポンス受信", {
       statusCode: response.getResponseCode(),
-      responseSize: response.getContentText().length
+      responseSize: response.getContentText().length,
     });
 
     if (response.getResponseCode() !== 200) {
@@ -306,7 +305,7 @@ function callGeminiDirectAPI(userPrompt, responseSchema) {
 
     const slideDataJson = content.parts[0].text;
     console.log("📄 Direct API: 生のJSONレスポンス:", slideDataJson);
-    
+
     const slideData = JSON.parse(slideDataJson);
     console.log("✨ Direct API: パース済みslideData:", slideData);
 
@@ -329,97 +328,142 @@ function callGeminiDirectAPI(userPrompt, responseSchema) {
 function getSlideDataSchema() {
   return {
     type: "ARRAY",
+    title: "slideData",
     items: {
-      oneOf: [
-        // title スライド
+      anyOf: [
         {
           type: "OBJECT",
+          description: "表紙スライド",
           properties: {
             type: { type: "STRING", enum: ["title"] },
             title: { type: "STRING" },
-            date: { type: "STRING", pattern: "^\\d{4}\\.\\d{2}\\.\\d{2}$" },
+            date: { type: "STRING" },
             notes: { type: "STRING" },
+            classifier: {
+              type: "OBJECT",
+              properties: {
+                signals: { type: "ARRAY", items: { type: "STRING" } },
+                rationale: { type: "STRING" },
+                confidence: { type: "NUMBER" },
+              },
+            },
           },
           required: ["type", "title", "date"],
+          propertyOrdering: ["type", "title", "date", "notes", "classifier"],
         },
-        // section スライド
         {
           type: "OBJECT",
+          description: "章扉",
           properties: {
             type: { type: "STRING", enum: ["section"] },
             title: { type: "STRING" },
-            sectionNo: { type: "NUMBER" },
+            sectionNo: { type: "INTEGER" },
             notes: { type: "STRING" },
+            classifier: {
+              type: "OBJECT",
+              properties: {
+                signals: { type: "ARRAY", items: { type: "STRING" } },
+                rationale: { type: "STRING" },
+                confidence: { type: "NUMBER" },
+              },
+            },
           },
           required: ["type", "title"],
+          propertyOrdering: [
+            "type",
+            "title",
+            "sectionNo",
+            "notes",
+            "classifier",
+          ],
         },
-        // content スライド
         {
           type: "OBJECT",
+          description: "クロージング",
+          properties: {
+            type: { type: "STRING", enum: ["closing"] },
+            notes: { type: "STRING" },
+            classifier: {
+              type: "OBJECT",
+              properties: {
+                signals: { type: "ARRAY", items: { type: "STRING" } },
+                rationale: { type: "STRING" },
+                confidence: { type: "NUMBER" },
+              },
+            },
+          },
+          required: ["type"],
+          propertyOrdering: ["type", "notes", "classifier"],
+        },
+        {
+          type: "OBJECT",
+          description:
+            "汎用コンテンツ（※他型に該当しない場合のフォールバック）",
           properties: {
             type: { type: "STRING", enum: ["content"] },
             title: { type: "STRING" },
             subhead: { type: "STRING" },
-            points: {
-              type: "ARRAY",
-              items: { type: "STRING" },
-              minItems: 3,
-              maxItems: 7,
-            },
+            points: { type: "ARRAY", items: { type: "STRING" } },
             twoColumn: { type: "BOOLEAN" },
             columns: {
               type: "ARRAY",
-              items: {
-                type: "ARRAY",
-                items: { type: "STRING" },
-              },
-              minItems: 2,
-              maxItems: 2,
+              items: { type: "ARRAY", items: { type: "STRING" } },
             },
             images: {
               type: "ARRAY",
-              maxItems: 6,
               items: {
-                oneOf: [
-                  { type: "STRING" },
-                  {
-                    type: "OBJECT",
-                    properties: {
-                      url: { type: "STRING" },
-                      caption: { type: "STRING" },
-                    },
-                    required: ["url"],
-                  },
-                ],
+                type: "OBJECT",
+                properties: {
+                  url: { type: "STRING" },
+                  caption: { type: "STRING" },
+                },
+                required: ["url"],
               },
             },
             notes: { type: "STRING" },
+            classifier: {
+              type: "OBJECT",
+              properties: {
+                signals: { type: "ARRAY", items: { type: "STRING" } },
+                rationale: { type: "STRING" },
+                confidence: { type: "NUMBER" },
+              },
+            },
           },
           required: ["type", "title"],
+          propertyOrdering: [
+            "type",
+            "title",
+            "subhead",
+            "points",
+            "twoColumn",
+            "columns",
+            "images",
+            "notes",
+            "classifier",
+          ],
         },
-        // compare スライド
         {
           type: "OBJECT",
+          description: "対比（vs/比較/メリデメなどの信号があるときに選択）",
           properties: {
             type: { type: "STRING", enum: ["compare"] },
             title: { type: "STRING" },
             subhead: { type: "STRING" },
             leftTitle: { type: "STRING" },
             rightTitle: { type: "STRING" },
-            leftItems: {
-              type: "ARRAY",
-              items: { type: "STRING" },
-            },
-            rightItems: {
-              type: "ARRAY",
-              items: { type: "STRING" },
-            },
-            images: {
-              type: "ARRAY",
-              items: { type: "STRING" },
-              maxItems: 6,
-            },
+            leftItems: { type: "ARRAY", items: { type: "STRING" } },
+            rightItems: { type: "ARRAY", items: { type: "STRING" } },
+            images: { type: "ARRAY", items: { type: "STRING" } },
             notes: { type: "STRING" },
+            classifier: {
+              type: "OBJECT",
+              properties: {
+                signals: { type: "ARRAY", items: { type: "STRING" } },
+                rationale: { type: "STRING" },
+                confidence: { type: "NUMBER" },
+              },
+            },
           },
           required: [
             "type",
@@ -429,30 +473,52 @@ function getSlideDataSchema() {
             "leftItems",
             "rightItems",
           ],
+          propertyOrdering: [
+            "type",
+            "title",
+            "subhead",
+            "leftTitle",
+            "rightTitle",
+            "leftItems",
+            "rightItems",
+            "images",
+            "notes",
+            "classifier",
+          ],
         },
-        // process スライド
         {
           type: "OBJECT",
+          description: "工程/手順（STEP/1.2.3.やフローの信号）",
           properties: {
             type: { type: "STRING", enum: ["process"] },
             title: { type: "STRING" },
             subhead: { type: "STRING" },
-            steps: {
-              type: "ARRAY",
-              items: { type: "STRING" },
-            },
-            images: {
-              type: "ARRAY",
-              items: { type: "STRING" },
-              maxItems: 6,
-            },
+            steps: { type: "ARRAY", items: { type: "STRING" } },
+            images: { type: "ARRAY", items: { type: "STRING" } },
             notes: { type: "STRING" },
+            classifier: {
+              type: "OBJECT",
+              properties: {
+                signals: { type: "ARRAY", items: { type: "STRING" } },
+                rationale: { type: "STRING" },
+                confidence: { type: "NUMBER" },
+              },
+            },
           },
           required: ["type", "title", "steps"],
+          propertyOrdering: [
+            "type",
+            "title",
+            "subhead",
+            "steps",
+            "images",
+            "notes",
+            "classifier",
+          ],
         },
-        // timeline スライド
         {
           type: "OBJECT",
+          description: "時系列（年月/四半期/ロードマップ等の信号）",
           properties: {
             type: { type: "STRING", enum: ["timeline"] },
             title: { type: "STRING" },
@@ -464,26 +530,37 @@ function getSlideDataSchema() {
                 properties: {
                   label: { type: "STRING" },
                   date: { type: "STRING" },
-                  state: {
-                    type: "STRING",
-                    enum: ["done", "next", "todo"],
-                  },
+                  state: { type: "STRING", enum: ["done", "next", "todo"] },
                 },
                 required: ["label", "date"],
+                propertyOrdering: ["label", "date", "state"],
               },
             },
-            images: {
-              type: "ARRAY",
-              items: { type: "STRING" },
-              maxItems: 6,
-            },
+            images: { type: "ARRAY", items: { type: "STRING" } },
             notes: { type: "STRING" },
+            classifier: {
+              type: "OBJECT",
+              properties: {
+                signals: { type: "ARRAY", items: { type: "STRING" } },
+                rationale: { type: "STRING" },
+                confidence: { type: "NUMBER" },
+              },
+            },
           },
           required: ["type", "title", "milestones"],
+          propertyOrdering: [
+            "type",
+            "title",
+            "subhead",
+            "milestones",
+            "images",
+            "notes",
+            "classifier",
+          ],
         },
-        // diagram スライド
         {
           type: "OBJECT",
+          description: "レーン図（関係/構成/依存/連携の信号）",
           properties: {
             type: { type: "STRING", enum: ["diagram"] },
             title: { type: "STRING" },
@@ -494,81 +571,114 @@ function getSlideDataSchema() {
                 type: "OBJECT",
                 properties: {
                   title: { type: "STRING" },
-                  items: {
-                    type: "ARRAY",
-                    items: { type: "STRING" },
-                  },
+                  items: { type: "ARRAY", items: { type: "STRING" } },
                 },
                 required: ["title", "items"],
+                propertyOrdering: ["title", "items"],
               },
             },
-            images: {
-              type: "ARRAY",
-              items: { type: "STRING" },
-              maxItems: 6,
-            },
+            images: { type: "ARRAY", items: { type: "STRING" } },
             notes: { type: "STRING" },
+            classifier: {
+              type: "OBJECT",
+              properties: {
+                signals: { type: "ARRAY", items: { type: "STRING" } },
+                rationale: { type: "STRING" },
+                confidence: { type: "NUMBER" },
+              },
+            },
           },
           required: ["type", "title", "lanes"],
+          propertyOrdering: [
+            "type",
+            "title",
+            "subhead",
+            "lanes",
+            "images",
+            "notes",
+            "classifier",
+          ],
         },
-        // cards スライド
         {
           type: "OBJECT",
+          description:
+            "カードグリッド（同型の要素が多数：機能一覧/事例/メンバー）",
           properties: {
             type: { type: "STRING", enum: ["cards"] },
             title: { type: "STRING" },
             subhead: { type: "STRING" },
-            columns: { type: "INTEGER" },
+            columnsCount: { type: "INTEGER", description: "2 または 3 を推奨" },
             items: {
               type: "ARRAY",
               items: {
-                oneOf: [
-                  { type: "STRING" },
-                  {
-                    type: "OBJECT",
-                    properties: {
-                      title: { type: "STRING" },
-                      desc: { type: "STRING" },
-                    },
-                    required: ["title"],
-                  },
-                ],
+                type: "OBJECT",
+                properties: {
+                  title: { type: "STRING" },
+                  desc: { type: "STRING" },
+                },
+                required: ["title"],
+                propertyOrdering: ["title", "desc"],
               },
             },
-            images: {
-              type: "ARRAY",
-              items: { type: "STRING" },
-              maxItems: 6,
-            },
+            images: { type: "ARRAY", items: { type: "STRING" } },
             notes: { type: "STRING" },
+            classifier: {
+              type: "OBJECT",
+              properties: {
+                signals: { type: "ARRAY", items: { type: "STRING" } },
+                rationale: { type: "STRING" },
+                confidence: { type: "NUMBER" },
+              },
+            },
           },
           required: ["type", "title", "items"],
+          propertyOrdering: [
+            "type",
+            "title",
+            "subhead",
+            "columnsCount",
+            "items",
+            "images",
+            "notes",
+            "classifier",
+          ],
         },
-        // table スライド
         {
           type: "OBJECT",
+          description: "表（マトリクスや比較表が自然なとき）",
           properties: {
             type: { type: "STRING", enum: ["table"] },
             title: { type: "STRING" },
             subhead: { type: "STRING" },
-            headers: {
-              type: "ARRAY",
-              items: { type: "STRING" },
-            },
+            headers: { type: "ARRAY", items: { type: "STRING" } },
             rows: {
               type: "ARRAY",
-              items: {
-                type: "ARRAY",
-                items: { type: "STRING" },
-              },
+              items: { type: "ARRAY", items: { type: "STRING" } },
             },
             notes: { type: "STRING" },
+            classifier: {
+              type: "OBJECT",
+              properties: {
+                signals: { type: "ARRAY", items: { type: "STRING" } },
+                rationale: { type: "STRING" },
+                confidence: { type: "NUMBER" },
+              },
+            },
           },
           required: ["type", "title", "headers", "rows"],
+          propertyOrdering: [
+            "type",
+            "title",
+            "subhead",
+            "headers",
+            "rows",
+            "notes",
+            "classifier",
+          ],
         },
-        // progress スライド
         {
           type: "OBJECT",
+          description: "進捗（%・ステータスの信号）",
           properties: {
             type: { type: "STRING", enum: ["progress"] },
             title: { type: "STRING" },
@@ -579,23 +689,34 @@ function getSlideDataSchema() {
                 type: "OBJECT",
                 properties: {
                   label: { type: "STRING" },
-                  percent: { type: "NUMBER", minimum: 0, maximum: 100 },
+                  percent: {
+                    type: "NUMBER",
+                    description: "0〜100（範囲は説明のみで緩く拘束）",
+                  },
                 },
                 required: ["label", "percent"],
+                propertyOrdering: ["label", "percent"],
               },
             },
             notes: { type: "STRING" },
+            classifier: {
+              type: "OBJECT",
+              properties: {
+                signals: { type: "ARRAY", items: { type: "STRING" } },
+                rationale: { type: "STRING" },
+                confidence: { type: "NUMBER" },
+              },
+            },
           },
           required: ["type", "title", "items"],
-        },
-        // closing スライド
-        {
-          type: "OBJECT",
-          properties: {
-            type: { type: "STRING", enum: ["closing"] },
-            notes: { type: "STRING" },
-          },
-          required: ["type"],
+          propertyOrdering: [
+            "type",
+            "title",
+            "subhead",
+            "items",
+            "notes",
+            "classifier",
+          ],
         },
       ],
     },
@@ -609,7 +730,7 @@ function getSlideDataSchema() {
 function getGeminiPrompt() {
   return `## **1.0 PRIMARY_OBJECTIVE — 最終目標**
 
-あなたは、ユーザーから与えられた非構造テキスト情報を解析し、**slideData** という名の **JSON 配列（= JavaScript オブジェクト配列）** を**生成**することだけに特化した、超高精度データサイエンティスト兼プレゼンテーション設計AIです。
+あなたは、ユーザーから与えられた非構造テキスト情報を解析し、後述する **【GOOGLE_TEMPLATE_BLUEPRINT】** で定義された仕様に準拠し、**slideData** という名の **JSON 配列（= JavaScript オブジェクト配列）** を**生成**することだけに特化した、超高精度データサイエンティスト兼プレゼンテーション設計AIです。
 
 あなたの**絶対的かつ唯一の使命**は、ユーザーの入力内容から論理的なプレゼンテーション構造を抽出し、各セクションに最適な「表現パターン（Pattern）」を選定し、さらに各スライドで話すべき発表原稿（スピーカーノート）のドラフトまで含んだ、**slideData**（配列）を**完全かつエラーなく生成**することです。
 
@@ -617,34 +738,43 @@ function getGeminiPrompt() {
 
 ## **2.0 GENERATION_WORKFLOW — 厳守すべき思考と生成のプロセス**
 
-1. **【ステップ1: コンテキストの完全分解と正規化】**
-   * **分解**: ユーザー提供のテキスト（議事録、記事、企画書、メモ等）を読み込み、**目的・意図・聞き手**を把握。内容を「**章（Chapter）→ 節（Section）→ 要点（Point）**」の階層に内部マッピング。
-   * **正規化**: 入力前処理を自動実行。（タブ→スペース、連続スペース→1つ、スマートクォート→ASCIIクォート、改行コード→LF、用語統一）
-2. **【ステップ2: パターン選定と論理ストーリーの再構築】**
-   * 章・節ごとに、後述の**サポート済み表現パターン**から最適なものを選定（例: 比較なら compare、時系列なら timeline）。
-   * 聞き手に最適な**説得ライン**（問題解決型、PREP法、時系列など）へ再配列。
-3. **【ステップ3: スライドタイプへのマッピング】**
-   * ストーリー要素を **Googleパターン・スキーマ**に**最適割当**。
-   * 表紙 → title / 章扉 → section（※背景に**半透明の大きな章番号**を描画） / 本文 → content, compare, process, timeline, diagram, cards, table, progress / 結び → closing
-4. **【ステップ4: オブジェクトの厳密な生成】**
-   * **3.0 スキーマ**と**4.0 ルール**に準拠し、文字列をエスケープ（' → \\', \\\\ → \\\\）して1件ずつ生成。
-   * **インライン強調記法**を使用可：
-     * **太字** → 太字
-     * [[重要語]] → **太字＋Googleブルー**（#4285F4）
-   * **画像URLの抽出**: 入力テキスト内の ![](…png|.jpg|.jpeg|.gif|.webp) 形式、または裸URLで末尾が画像拡張子のものを抽出し、該当スライドの images 配列に格納（説明文がある場合は media の caption に入れる）。
-   * **スピーカーノート生成**: 各スライドの内容に基づき、発表者が話すべき内容の**ドラフトを生成**し、notesプロパティに格納する。
-5. **【ステップ5: 自己検証と反復修正】**
-   * **チェックリスト**:
-     * 文字数・行数・要素数の上限遵守（各パターンの規定に従うこと）
-     * 箇条書き要素に**改行（\\n）を含めない**
-     * テキスト内に**禁止記号**（■ / →）を含めない（※装飾・矢印は描画ロジック側で処理）
-     * 箇条書き文末に **句点「。」を付けない**（体言止め推奨）
-     * notesプロパティが各スライドに適切に設定されているか確認
-     * title.dateはYYYY.MM.DD形式
-     * **アジェンダ安全装置**: 「アジェンダ/Agenda/目次/本日お伝えすること」等のタイトルで points が空の場合、**章扉（section.title）から自動生成**するため、空配列を返さず **ダミー3点**以上を必ず生成
-6. **【ステップ6: 最終出力】**
-* 検証済みオブジェクトを論理順に **slideData = [ ... ] にそのまま代入可能な形の _JSON配列_** として**のみ**出力すること。
-* **コード（.gs など）やテンプレ全文、解説・前置き・後書きは一切出力しない。** 出力は**JSON配列のみ**とする。
+1. **【ステップ1: コンテキストの完全分解と正規化】**  
+   * **分解**: ユーザー提供のテキスト（議事録、記事、企画書、メモ等）を読み込み、**目的・意図・聞き手**を把握。内容を「**章（Chapter）→ 節（Section）→ 要点（Point）**」の階層に内部マッピング。  
+   * **正規化**: 入力前処理を自動実行。（タブ→スペース、連続スペース→1つ、スマートクォート→ASCIIクォート、改行コード→LF、用語統一）  
+2. **【ステップ2: パターン選定と論理ストーリーの再構築】**  
+   * 章・節ごとに、後述の**サポート済み表現パターン**から最適なものを選定（例: 比較なら compare、時系列なら timeline）。  
+   * 聞き手に最適な**説得ライン**（問題解決型、PREP法、時系列など）へ再配列。  
+   * **【パターン判定ヒューリスティクス（促進）】**  
+     * **compare**: 「vs / 比較 / 対比 / メリット・デメリット / 長所・短所 / 左右で並列」などの語や構造がある場合  
+     * **process**: 「手順 / 工程 / フロー / STEP / 1. 2. 3. / →で連鎖」など段階列挙の痕跡がある場合  
+     * **timeline**: 「YYYY-MM / YYYY年 / Q1〜Q4 / スケジュール / ロードマップ / 期日」など日時・時系列語が多い場合  
+     * **diagram**: 「関係 / 体系 / 構成 / 依存 / 連携 / データフロー」など関係性整理が主題の場合  
+     * **cards**: 同型フォーマットの項目が多数（例: 機能一覧・事例集・メンバー紹介等）で2〜3列配置が適する場合  
+     * **table**: 列・行のマトリクス（CSV/TSV様式、ヘッダ＋複数行）や比較表が自然な場合  
+     * **progress**: 進捗・達成率（%）・ステータス（done/next/todo）指標が主題の場合  
+     * **content** は**他のいずれにも該当しない場合のフォールバック**とする  
+3. **【ステップ3: スライドタイプへのマッピング】**  
+   * ストーリー要素を **Googleパターン・スキーマ**に**最適割当**。  
+   * 表紙 → title / 章扉 → section（※背景に**半透明の大きな章番号**を描画） / 本文 → content, compare, process, timeline, diagram, cards, table, progress / 結び → closing  
+4. **【ステップ4: オブジェクトの厳密な生成】**  
+   * **3.0 スキーマ**と**4.0 ルール**に準拠し、文字列をエスケープ（' → \', \\ → \\）して1件ずつ生成。  
+   * **インライン強調記法**を使用可：  
+     * **太字** → 太字  
+     * [[重要語]] → **太字＋Googleブルー**（#4285F4）  
+   * **画像URLの抽出**: 入力テキスト内の ![](…png|.jpg|.jpeg|.gif|.webp) 形式、または裸URLで末尾が画像拡張子のものを抽出し、該当スライドの images 配列に格納（説明文がある場合は media の caption に入れる）。  
+   * **スピーカーノート生成**: 各スライドの内容に基づき、発表者が話すべき内容の**ドラフトを生成**し、notesプロパティに格納する。  
+5. **【ステップ5: 自己検証と反復修正】**  
+   * **チェックリスト**:  
+     * 文字数・行数・要素数の上限遵守（各パターンの規定に従うこと）  
+     * 箇条書き要素に**改行（\n）を含めない**  
+     * テキスト内に**禁止記号**（■ / →）を含めない（※装飾・矢印は描画ロジック側で処理）  
+     * 箇条書き文末に **句点「。」を付けない**（体言止め推奨）  
+     * notesプロパティが各スライドに適切に設定されているか確認  
+     * title.dateはYYYY.MM.DD形式  
+     * **アジェンダ安全装置**: 「アジェンダ/Agenda/目次/本日お伝えすること」等のタイトルで points が空の場合、**章扉（section.title）から自動生成**するため、空配列を返さず **ダミー3点**以上を必ず生成  
+     * **多様性安全装置**: 本文スライドのうち **content が全体の70%を超える**場合、  
+       上記ヒューリスティクスに基づいて **compare/process/timeline/diagram/cards/table/progress** への  
+       再割当を試行する（該当シグナルがある限り content への安易なフォールバックを禁止）  
 
 ## **3.0 slideDataスキーマ定義（GooglePatternVer.+SpeakerNotes）**
 
@@ -654,53 +784,59 @@ function getGeminiPrompt() {
 
 **スライドタイプ別定義**
 
-* **タイトル**: { type: 'title', title: '...', date: 'YYYY.MM.DD', notes?: '...' }
-* **章扉**: { type: 'section', title: '...', sectionNo?: number, notes?: '...' } ※sectionNo を指定しない場合は自動連番
+* **タイトル**: { type: 'title', title: '...', date: 'YYYY.MM.DD', notes?: '...' }  
+* **章扉**: { type: 'section', title: '...', sectionNo?: number, notes?: '...' } ※sectionNo を指定しない場合は自動連番  
 * **クロージング**: { type: 'closing', notes?: '...' }
 
 **本文パターン（必要に応じて選択）**
 
-* **content（1カラム/2カラム＋画像＋小見出し）** { type: 'content', title: '...', subhead?: string, points?: string[], twoColumn?: boolean, columns?: [string[], string[]], images?: (string | { url: string, caption?: string })[], notes?: '...' }
-* **compare（対比）** { type: 'compare', title: '...', subhead?: string, leftTitle: '...', rightTitle: '...', leftItems: string[], rightItems: string[], images?: string[], notes?: '...' }
-* **process（手順・工程）** { type: 'process', title: '...', subhead?: string, steps: string[], images?: string[], notes?: '...' }
-* **timeline（時系列）** { type: 'timeline', title: '...', subhead?: string, milestones: { label: string, date: string, state?: 'done'|'next'|'todo' }[], images?: string[], notes?: '...' }
-* **diagram（レーン図）** { type: 'diagram', title: '...', subhead?: string, lanes: { title: string, items: string[] }[], images?: string[], notes?: '...' }
-* **cards（カードグリッド）** { type: 'cards', title: '...', subhead?: string, columns?: 2|3, items: (string | { title: string, desc?: string })[], images?: string[], notes?: '...' }
-* **table（表）** { type: 'table', title: '...', subhead?: string, headers: string[], rows: string[][], notes?: '...' }
+* **content（1カラム/2カラム＋画像＋小見出し）** { type: 'content', title: '...', subhead?: string, points?: string[], twoColumn?: boolean, columns?: [string[], string[]], images?: (string | { url: string, caption?: string })[], notes?: '...' }  
+* **compare（対比）** { type: 'compare', title: '...', subhead?: string, leftTitle: '...', rightTitle: '...', leftItems: string[], rightItems: string[], images?: string[], notes?: '...' }  
+* **process（手順・工程）** { type: 'process', title: '...', subhead?: string, steps: string[], images?: string[], notes?: '...' }  
+* **timeline（時系列）** { type: 'timeline', title: '...', subhead?: string, milestones: { label: string, date: string, state?: 'done'|'next'|'todo' }[], images?: string[], notes?: '...' }  
+* **diagram（レーン図）** { type: 'diagram', title: '...', subhead?: string, lanes: { title: string, items: string[] }[], images?: string[], notes?: '...' }  
+* **cards（カードグリッド）** { type: 'cards', title: '...', subhead?: string, columns?: 2|3, items: (string | { title: string, desc?: string })[], images?: string[], notes?: '...' }  
+* **table（表）** { type: 'table', title: '...', subhead?: string, headers: string[], rows: string[][], notes?: '...' }  
 * **progress（進捗）** { type: 'progress', title: '...', subhead?: string, items: { label: string, percent: number }[], notes?: '...' }
 
 ## **4.0 COMPOSITION_RULES（GooglePatternVer.） — 美しさと論理性を最大化する絶対規則**
 
-* **全体構成**:
-  1. title（表紙）
-  2. content（アジェンダ、※章が2つ以上のときのみ）
-  3. section
-  4. 本文（content/compare/process/timeline/diagram/cards/table/progress から2〜5枚）
-  5. （3〜4を章の数だけ繰り返し）
-  6. closing（結び）
-* **テキスト表現・字数**（最大目安）:
-  * title.title: 全角35文字以内
-  * section.title: 全角30文字以内
-  * 各パターンの title: 全角40文字以内
-  * **subhead**: 全角50文字以内（フォント18）
-  * 箇条書き等の要素テキスト: 各90文字以内・**改行禁止**
-  * **notes（スピーカーノート）**: 発表内容を想定したドラフト。文字数制限は緩やかだが、要点を簡潔に。**プレーンテキスト**とし、強調記法は用いないこと。
-  * **禁止記号**: ■ / → を含めない（矢印や区切りは描画ロジック側で処理）
-  * 箇条書き文末の句点「。」**禁止**（体言止め推奨）
+* **全体構成**:  
+  1. title（表紙）  
+  2. content（アジェンダ、※章が2つ以上のときのみ）  
+  3. section  
+  4. 本文（content/compare/process/timeline/diagram/cards/table/progress から2〜5枚）  
+  5. （3〜4を章の数だけ繰り返し）  
+  6. closing（結び）  
+* **テキスト表現・字数**（最大目安）:  
+  * title.title: 全角35文字以内  
+  * section.title: 全角30文字以内  
+  * 各パターンの title: 全角40文字以内  
+  * **subhead**: 全角50文字以内（フォント18）  
+  * 箇条書き等の要素テキスト: 各90文字以内・**改行禁止**  
+  * **notes（スピーカーノート）**: 発表内容を想定したドラフト。文字数制限は緩やかだが、要点を簡潔に。**プレーンテキスト**とし、強調記法は用いないこと。  
+  * **禁止記号**: ■ / → を含めない（矢印や区切りは描画ロジック側で処理）  
+  * 箇条書き文末の句点「。」**禁止**（体言止め推奨）  
   * **インライン強調記法**: **太字** と [[重要語]]（太字＋Googleブルー）を必要箇所に使用可
 
 ## **5.0 SAFETY_GUIDELINES — エラー回避と実行環境負荷の配慮**
 
-* スライド上限: **最大50枚**
-* 画像制約: **50MB未満・25MP以下**の **PNG/JPEG/GIF/WebP**
-* 実行時間: **バックエンド実行環境の上限に配慮**（タイムアウト回避のため、過大な出力を避ける）
-* テキストオーバーフロー回避: 本命令の**上限値厳守**
-* フォント: Arial が無い環境では標準サンセリフに自動フォールバック
-* 文字列リテラルの安全性: ' と \\\\ を確実にエスケープ
+* スライド上限: **最大50枚**  
+* 画像制約: **50MB未満・25MP以下**の **PNG/JPEG/GIF/WebP**  
+* 実行時間: **バックエンド実行環境の上限に配慮**（タイムアウト回避のため、過大な出力を避ける）  
+* テキストオーバーフロー回避: 本命令の**上限値厳守**  
+* フォント: Arial が無い環境では標準サンセリフに自動フォールバック  
+* 文字列リテラルの安全性: ' と \\ を確実にエスケープ
+
+*（任意）各スライドには **classifier** メタを付与してよい：  
+  '{ classifier: { signals: string[], rationale: string, confidence: number(0-1) } }' 
+  * signals: 判定根拠となった語や構造（例: ["vs","メリデメ","左右並列"] など）  
+  * rationale: なぜその type を選んだかの短い理由  
+  * confidence: 選定の自信度*
 
 ## **6.0 OUTPUT_FORMAT — 最終出力形式**
 
-* 出力は **slideData の _JSON配列_ のみ** とし、**そのまま const slideData = [...] に代入可能**な形で返すこと。
+* 出力は **slideData の _JSON配列_ のみ** とし、**そのまま const slideData = [...] に代入可能**な形で返すこと。  
 * **コード断片やテンプレ全文、前置き/解説/謝辞/補足は一切含めない。** 出力は**JSON配列のみ**とする。`;
 }
 
