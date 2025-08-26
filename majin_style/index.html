@@ -406,7 +406,7 @@ b. カスタム生成の場合
           }
           showCustomAlert("エラーが発生しました。もう一度お試しください。");
         })
-        [apiMethod](prompt, generateOption); // おまかせ生成かカスタム生成かで処理を分岐
+        [apiMethod]({ prompt, generateOption }); // おまかせ生成かカスタム生成かで処理を分岐
 
       google.script.run.outputLog(prompt, generateOption, buttonId);
     }
