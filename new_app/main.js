@@ -1,21 +1,7 @@
 /**
- * メイン実行関数
+ * Geminiの構造化出力でスライドデータを生成する
  */
-
-/**
- * スライドデータを生成する
- */
-function createSlidePresentation(userText) {
-  return generateSlideDataJSON(userText);
-}
-
-/**
- * テスト実行
- */
-function runTest() {
-  // まず設定をチェック
-  checkConfig();
-  
+function generateSlideData() {
   const testText = `
 新商品発表会
 
@@ -31,17 +17,5 @@ function runTest() {
 定価: 39,800円
   `;
   
-  try {
-    const result = createSlidePresentation(testText);
-    console.log('✅ 成功！生成されたスライド数:', result.slideData.length);
-    return result;
-  } catch (error) {
-    console.error('❌ エラー:', error.message);
-    throw error;
-  }
-}
-
-
-function generateSlideData() {
-  // Geminiの構造化出力で出力したJSONデータを slide_generatorのslideDataのJavaScriptオブジェクト配列として入れる。
+  return requestGemini(testText);
 }

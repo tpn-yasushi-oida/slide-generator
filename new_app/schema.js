@@ -1,6 +1,6 @@
 /**
  * Gemini 構造化出力用 JSON Schema（response_schema 向け）
- * サンプルデータと prompt.js 仕様に完全準拠
+ * サンプルデータに完全準拠、oneOfパターンで各スライドタイプを厳密に定義
  */
 function getSlideDataSchema() {
   return {
@@ -11,167 +11,335 @@ function getSlideDataSchema() {
         type: "ARRAY",
         items: {
           type: "OBJECT",
-          required: ["type"],
-          properties: {
-            // 共通プロパティ
-            type: {
-              type: "STRING",
-              enum: ["title", "section", "closing", "content", "compare", "process", "timeline", "diagram", "cards", "headerCards", "table", "progress", "quote", "kpi", "bulletCards", "faq", "statsCompare"]
-            },
-            title: { type: "STRING" },
-            subhead: { type: "STRING" },
-            notes: { type: "STRING" },
-            
+          oneOf: [
             // title専用
-            date: { type: "STRING" },
-            
-            // section専用
-            sectionNo: { type: "INTEGER" },
-            
-            // content専用
-            points: {
-              type: "ARRAY",
-              items: { type: "STRING" }
+            {
+              properties: {
+                type: { type: "STRING", enum: ["title"] },
+                title: { type: "STRING" },
+                date: { type: "STRING" },
+                notes: { type: "STRING" }
+              },
+              required: ["type", "title"]
             },
-            twoColumn: { type: "BOOLEAN" },
-            columnData: {
-              type: "ARRAY",
-              items: {
-                type: "ARRAY",
-                items: { type: "STRING" }
-              }
-            },
-            
-            // compare, statsCompare専用
-            leftTitle: { type: "STRING" },
-            rightTitle: { type: "STRING" },
-            leftItems: {
-              type: "ARRAY",
-              items: { type: "STRING" }
-            },
-            rightItems: {
-              type: "ARRAY",
-              items: { type: "STRING" }
-            },
-            
-            // process専用
-            steps: {
-              type: "ARRAY",
-              items: { type: "STRING" }
-            },
-            
-            // timeline専用
-            milestones: {
-              type: "ARRAY",
-              items: {
-                type: "OBJECT",
-                required: ["label", "date"],
-                properties: {
-                  label: { type: "STRING" },
-                  date: { type: "STRING" },
-                  state: {
-                    type: "STRING",
-                    enum: ["done", "next", "todo"]
+            // bulletCards専用
+            {
+              properties: {
+                type: { type: "STRING", enum: ["bulletCards"] },
+                title: { type: "STRING" },
+                subhead: { type: "STRING" },
+                items: {
+                  type: "ARRAY",
+                  items: {
+                    type: "OBJECT",
+                    properties: {
+                      title: { type: "STRING" },
+                      desc: { type: "STRING" }
+                    },
+                    required: ["title", "desc"]
                   }
-                }
-              }
+                },
+                notes: { type: "STRING" }
+              },
+              required: ["type", "title", "items"]
             },
-            
-            // diagram専用
-            lanes: {
-              type: "ARRAY",
-              items: {
-                type: "OBJECT",
-                required: ["title", "items"],
-                properties: {
-                  title: { type: "STRING" },
+            // faq専用
+            {
+              properties: {
+                type: { type: "STRING", enum: ["faq"] },
+                title: { type: "STRING" },
+                subhead: { type: "STRING" },
+                items: {
+                  type: "ARRAY",
+                  items: {
+                    type: "OBJECT",
+                    properties: {
+                      q: { type: "STRING" },
+                      a: { type: "STRING" }
+                    },
+                    required: ["q", "a"]
+                  }
+                },
+                notes: { type: "STRING" }
+              },
+              required: ["type", "title", "items"]
+            },
+            // closing専用
+            {
+              properties: {
+                type: { type: "STRING", enum: ["closing"] },
+                notes: { type: "STRING" }
+              },
+              required: ["type"]
+            },
+            // section専用
+            {
+              properties: {
+                type: { type: "STRING", enum: ["section"] },
+                title: { type: "STRING" },
+                sectionNo: { type: "INTEGER" },
+                notes: { type: "STRING" }
+              },
+              required: ["type", "title"]
+            },
+            // content専用
+            {
+              properties: {
+                type: { type: "STRING", enum: ["content"] },
+                title: { type: "STRING" },
+                subhead: { type: "STRING" },
+                points: {
+                  type: "ARRAY",
+                  items: { type: "STRING" }
+                },
+                twoColumn: { type: "BOOLEAN" },
+                columnData: {
+                  type: "ARRAY",
                   items: {
                     type: "ARRAY",
                     items: { type: "STRING" }
                   }
-                }
-              }
+                },
+                notes: { type: "STRING" }
+              },
+              required: ["type", "title"]
             },
-            
-            // table専用
-            headers: {
-              type: "ARRAY",
-              items: { type: "STRING" }
+            // compare専用
+            {
+              properties: {
+                type: { type: "STRING", enum: ["compare"] },
+                title: { type: "STRING" },
+                subhead: { type: "STRING" },
+                leftTitle: { type: "STRING" },
+                rightTitle: { type: "STRING" },
+                leftItems: {
+                  type: "ARRAY",
+                  items: { type: "STRING" }
+                },
+                rightItems: {
+                  type: "ARRAY",
+                  items: { type: "STRING" }
+                },
+                notes: { type: "STRING" }
+              },
+              required: ["type", "title", "leftTitle", "rightTitle", "leftItems", "rightItems"]
             },
-            rows: {
-              type: "ARRAY",
-              items: {
-                type: "ARRAY",
-                items: { type: "STRING" }
-              }
+            // process専用
+            {
+              properties: {
+                type: { type: "STRING", enum: ["process"] },
+                title: { type: "STRING" },
+                subhead: { type: "STRING" },
+                steps: {
+                  type: "ARRAY",
+                  items: { type: "STRING" }
+                },
+                notes: { type: "STRING" }
+              },
+              required: ["type", "title", "steps"]
             },
-            
-            // quote専用
-            text: { type: "STRING" },
-            author: { type: "STRING" },
-            
-            // 汎用items配列（スライドタイプに応じて内部構造が変わる）
-            items: {
-              type: "ARRAY",
-              items: {
-                type: "OBJECT",
-                properties: {
-                  // bulletCards用
-                  title: { type: "STRING" },
-                  desc: { type: "STRING" },
-                  
-                  // faq用
-                  q: { type: "STRING" },
-                  a: { type: "STRING" },
-                  
-                  // cards用
-                  label: { type: "STRING" },
-                  value: { type: "STRING" },
-                  change: { type: "STRING" },
-                  status: {
-                    type: "STRING",
-                    enum: ["good", "bad", "neutral"]
-                  },
-                  
-                  // progress用
-                  percent: { type: "NUMBER" }
-                }
-              }
-            },
-            
-            // statsCompare専用
-            stats: {
-              type: "ARRAY",
-              items: {
-                type: "OBJECT",
-                required: ["label", "leftValue", "rightValue"],
-                properties: {
-                  label: { type: "STRING" },
-                  leftValue: { type: "STRING" },
-                  rightValue: { type: "STRING" },
-                  trend: {
-                    type: "STRING",
-                    enum: ["up", "down", "neutral"]
+            // timeline専用
+            {
+              properties: {
+                type: { type: "STRING", enum: ["timeline"] },
+                title: { type: "STRING" },
+                subhead: { type: "STRING" },
+                milestones: {
+                  type: "ARRAY",
+                  items: {
+                    type: "OBJECT",
+                    properties: {
+                      label: { type: "STRING" },
+                      date: { type: "STRING" },
+                      state: {
+                        type: "STRING",
+                        enum: ["done", "next", "todo"]
+                      }
+                    },
+                    required: ["label", "date"]
                   }
-                }
-              }
+                },
+                notes: { type: "STRING" }
+              },
+              required: ["type", "title", "milestones"]
             },
-            
-            // 列数指定（cards、headerCards、kpi等用）
-            columns: { type: "INTEGER" },
-            
-            // 画像用（文字列またはオブジェクト形式に対応）
-            images: {
-              type: "ARRAY",
-              items: {
-                type: "OBJECT",
-                properties: {
-                  url: { type: "STRING" },
-                  caption: { type: "STRING" }
-                }
-              }
+            // diagram専用
+            {
+              properties: {
+                type: { type: "STRING", enum: ["diagram"] },
+                title: { type: "STRING" },
+                subhead: { type: "STRING" },
+                lanes: {
+                  type: "ARRAY",
+                  items: {
+                    type: "OBJECT",
+                    properties: {
+                      title: { type: "STRING" },
+                      items: {
+                        type: "ARRAY",
+                        items: { type: "STRING" }
+                      }
+                    },
+                    required: ["title", "items"]
+                  }
+                },
+                notes: { type: "STRING" }
+              },
+              required: ["type", "title", "lanes"]
+            },
+            // cards専用
+            {
+              properties: {
+                type: { type: "STRING", enum: ["cards"] },
+                title: { type: "STRING" },
+                subhead: { type: "STRING" },
+                columns: { type: "INTEGER" },
+                items: {
+                  type: "ARRAY",
+                  items: {
+                    type: "OBJECT",
+                    properties: {
+                      title: { type: "STRING" },
+                      desc: { type: "STRING" }
+                    }
+                  }
+                },
+                notes: { type: "STRING" }
+              },
+              required: ["type", "title"]
+            },
+            // headerCards専用
+            {
+              properties: {
+                type: { type: "STRING", enum: ["headerCards"] },
+                title: { type: "STRING" },
+                subhead: { type: "STRING" },
+                columns: { type: "INTEGER" },
+                items: {
+                  type: "ARRAY",
+                  items: {
+                    type: "OBJECT",
+                    properties: {
+                      title: { type: "STRING" },
+                      desc: { type: "STRING" }
+                    },
+                    required: ["title"]
+                  }
+                },
+                notes: { type: "STRING" }
+              },
+              required: ["type", "title", "items"]
+            },
+            // table専用
+            {
+              properties: {
+                type: { type: "STRING", enum: ["table"] },
+                title: { type: "STRING" },
+                subhead: { type: "STRING" },
+                headers: {
+                  type: "ARRAY",
+                  items: { type: "STRING" }
+                },
+                rows: {
+                  type: "ARRAY",
+                  items: {
+                    type: "ARRAY",
+                    items: { type: "STRING" }
+                  }
+                },
+                notes: { type: "STRING" }
+              },
+              required: ["type", "title", "headers", "rows"]
+            },
+            // progress専用
+            {
+              properties: {
+                type: { type: "STRING", enum: ["progress"] },
+                title: { type: "STRING" },
+                subhead: { type: "STRING" },
+                items: {
+                  type: "ARRAY",
+                  items: {
+                    type: "OBJECT",
+                    properties: {
+                      label: { type: "STRING" },
+                      percent: { type: "NUMBER" }
+                    },
+                    required: ["label", "percent"]
+                  }
+                },
+                notes: { type: "STRING" }
+              },
+              required: ["type", "title", "items"]
+            },
+            // quote専用
+            {
+              properties: {
+                type: { type: "STRING", enum: ["quote"] },
+                title: { type: "STRING" },
+                subhead: { type: "STRING" },
+                text: { type: "STRING" },
+                author: { type: "STRING" },
+                notes: { type: "STRING" }
+              },
+              required: ["type", "text", "author"]
+            },
+            // kpi専用
+            {
+              properties: {
+                type: { type: "STRING", enum: ["kpi"] },
+                title: { type: "STRING" },
+                subhead: { type: "STRING" },
+                columns: { type: "INTEGER" },
+                items: {
+                  type: "ARRAY",
+                  items: {
+                    type: "OBJECT",
+                    properties: {
+                      label: { type: "STRING" },
+                      value: { type: "STRING" },
+                      change: { type: "STRING" },
+                      status: {
+                        type: "STRING",
+                        enum: ["good", "bad", "neutral"]
+                      }
+                    },
+                    required: ["label", "value"]
+                  }
+                },
+                notes: { type: "STRING" }
+              },
+              required: ["type", "title", "items"]
+            },
+            // statsCompare専用
+            {
+              properties: {
+                type: { type: "STRING", enum: ["statsCompare"] },
+                title: { type: "STRING" },
+                subhead: { type: "STRING" },
+                leftTitle: { type: "STRING" },
+                rightTitle: { type: "STRING" },
+                stats: {
+                  type: "ARRAY",
+                  items: {
+                    type: "OBJECT",
+                    properties: {
+                      label: { type: "STRING" },
+                      leftValue: { type: "STRING" },
+                      rightValue: { type: "STRING" },
+                      trend: {
+                        type: "STRING",
+                        enum: ["up", "down", "neutral"]
+                      }
+                    },
+                    required: ["label", "leftValue", "rightValue"]
+                  }
+                },
+                notes: { type: "STRING" }
+              },
+              required: ["type", "title", "leftTitle", "rightTitle", "stats"]
             }
-          }
+          ]
         }
       }
     }
