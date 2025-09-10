@@ -1,13 +1,9 @@
-const PROJECT_ID =
-  PropertiesService.getScriptProperties().getProperty("PROJECT_ID");
+const PROJECT_ID = PropertiesService.getScriptProperties().getProperty("PROJECT_ID");
 const REGION = PropertiesService.getScriptProperties().getProperty("REGION");
-const CLIENT_EMAIL =
-  PropertiesService.getScriptProperties().getProperty("CLIENT_EMAIL");
-const PRIVATE_KEY =
-  PropertiesService.getScriptProperties().getProperty("PRIVATE_KEY");
-const PARSED_PRIVATE_KEY = PRIVATE_KEY.replace(/\n/g, "\n");
-const GEMINI_MODEL =
-  PropertiesService.getScriptProperties().getProperty("GEMINI_MODEL");
+const CLIENT_EMAIL = PropertiesService.getScriptProperties().getProperty("CLIENT_EMAIL");
+const PRIVATE_KEY = PropertiesService.getScriptProperties().getProperty("PRIVATE_KEY");
+const PERSED_PRIVATE_KEY = PRIVATE_KEY.replace(/\\n/g, '\n');
+const GEMINI_MODEL = PropertiesService.getScriptProperties().getProperty("GEMINI_MODEL");
 
 
 function getAccessToken() {
@@ -47,20 +43,26 @@ function getAccessToken() {
 return token;
 }
 
-function requestGemini(prompt) {
+function requestGemini(userInput) {
   const token = getAccessToken();
-  const geminiEndpoint = `https://${REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/publishers/google/models/${GEMINI_MODEL}:streamGenerateContent`;
-  // const model =
+  const geminiEndpoint = `https://${REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/publishers/google/models/${GEMINI_MODEL}:generateContent`;
+
+  // プロンプトとユーザー入力を結合
+  const fullPrompt = getGeminiPrompt() + "\n\n" + userInput;
 
   const requestBody = {
     contents: {
       role: "user",
       parts: [
         {
-          text: prompt,
+          text: fullPrompt,
         },
       ],
     },
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: getSlideDataSchema()
+    }
   };
 
   const response = UrlFetchApp.fetch(geminiEndpoint, {
@@ -75,18 +77,11 @@ function requestGemini(prompt) {
   // responseは文字列形式なので、JSONとしてパースする
   const jsonResponse = JSON.parse(response.getContentText());
 
-  let generatedText = "";
+  // 構造化出力では、candidates[0].content.parts[0].textにJSONが格納されている
+  const generatedText = jsonResponse.candidates[0].content.parts[0].text;
 
-  // JSONからテキストを抽出して結合
-  jsonResponse.forEach(function (item) {
-    item.candidates.forEach(function (candidate) {
-      candidate.content.parts.forEach(function (part) {
-        generatedText += part.text;
-      });
-    });
-  });
-
-  return generatedText;
+  // JSONをパースして返す
+  return JSON.parse(generatedText);
 }
 
 /**
@@ -130,24 +125,37 @@ function testGeminiAPI() {
       return false;
     }
 
-    // 3. 実際にGemini APIにリクエストを送信
-    const testPrompt = "こんにちは、簡単なテストです。1+1は何ですか？";
+    // 3. 実際にGemini APIに構造化出力をリクエスト送信
+    const testInput = "AIについて簡潔なプレゼンテーションを作成してください。背景、メリット、今後の展望を含めて3枚のスライドでお願いします。";
     try {
-      const response = requestGemini(testPrompt);
-      Logger.log("Gemini APIからの応答: " + response);
+      const response = requestGemini(testInput);
+      Logger.log("Gemini APIからの構造化応答: " + JSON.stringify(response, null, 2));
 
-      if (!response || response.trim() === "") {
-        Logger.log("警告: Gemini APIからの応答が空です");
+      // 構造化出力の検証
+      if (!response || !response.slideData || !Array.isArray(response.slideData)) {
+        Logger.log("警告: 構造化出力の形式が正しくありません");
         return false;
       }
 
-      Logger.log(
-        "テスト成功: Gemini APIとの接続とレスポンスの取得に成功しました"
-      );
+      // slideDataの内容を検証
+      if (response.slideData.length === 0) {
+        Logger.log("警告: slideDataが空です");
+        return false;
+      }
+
+      // 最初のスライドのタイプを確認
+      const firstSlide = response.slideData[0];
+      if (!firstSlide.type) {
+        Logger.log("警告: スライドにtypeプロパティがありません");
+        return false;
+      }
+
+      Logger.log("構造化出力テスト成功: " + response.slideData.length + "枚のスライドが生成されました");
+      Logger.log("最初のスライドタイプ: " + firstSlide.type);
       return true;
     } catch (e) {
       Logger.log(
-        "エラー: Gemini APIリクエスト中に例外が発生しました: " + e.toString()
+        "エラー: 構造化出力リクエスト中に例外が発生しました: " + e.toString()
       );
       return false;
     }

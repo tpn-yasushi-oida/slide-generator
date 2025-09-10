@@ -1,0 +1,396 @@
+/**
+ * Gemini 構造化出力用 JSON Schema（response_schema 向け）
+ * 出力トップは { "slideData": [...] } の単一JSON
+ */
+function getSlideDataSchema() {
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: ["slideData"],
+    properties: {
+      slideData: {
+        type: "array",
+        items: {
+          oneOf: [
+            // title
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["type", "title", "date"],
+              properties: {
+                type: { const: "title" },
+                title: { type: "string" },
+                date: { type: "string", pattern: "^\\d{4}\\.\\d{2}\\.\\d{2}$" },
+                notes: { type: "string" }
+              }
+            },
+            // section
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["type", "title"],
+              properties: {
+                type: { const: "section" },
+                title: { type: "string" },
+                sectionNo: { type: "integer" },
+                notes: { type: "string" }
+              }
+            },
+            // closing
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["type"],
+              properties: {
+                type: { const: "closing" },
+                notes: { type: "string" }
+              }
+            },
+            // content
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["type", "title"],
+              properties: {
+                type: { const: "content" },
+                title: { type: "string" },
+                subhead: { type: "string" },
+                points: { type: "array", items: { type: "string" } },
+                twoColumn: { type: "boolean" },
+                columns: {
+                  type: "array",
+                  minItems: 2,
+                  maxItems: 2,
+                  items: { type: "array", items: { type: "string" } }
+                },
+                images: {
+                  type: "array",
+                  items: {
+                    oneOf: [
+                      { type: "string", format: "uri" },
+                      {
+                        type: "object",
+                        additionalProperties: false,
+                        required: ["url"],
+                        properties: {
+                          url: { type: "string", format: "uri" },
+                          caption: { type: "string" }
+                        }
+                      }
+                    ]
+                  }
+                },
+                notes: { type: "string" }
+              }
+            },
+            // compare
+            {
+              type: "object",
+              additionalProperties: false,
+              required: [
+                "type",
+                "title",
+                "leftTitle",
+                "rightTitle",
+                "leftItems",
+                "rightItems"
+              ],
+              properties: {
+                type: { const: "compare" },
+                title: { type: "string" },
+                subhead: { type: "string" },
+                leftTitle: { type: "string" },
+                rightTitle: { type: "string" },
+                leftItems: { type: "array", items: { type: "string" } },
+                rightItems: { type: "array", items: { type: "string" } },
+                images: { type: "array", items: { type: "string", format: "uri" } },
+                notes: { type: "string" }
+              }
+            },
+            // process
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["type", "title", "steps"],
+              properties: {
+                type: { const: "process" },
+                title: { type: "string" },
+                subhead: { type: "string" },
+                steps: { type: "array", items: { type: "string" } },
+                images: { type: "array", items: { type: "string", format: "uri" } },
+                notes: { type: "string" }
+              }
+            },
+            // timeline
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["type", "title", "milestones"],
+              properties: {
+                type: { const: "timeline" },
+                title: { type: "string" },
+                subhead: { type: "string" },
+                milestones: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["label", "date"],
+                    properties: {
+                      label: { type: "string" },
+                      date: { type: "string" },
+                      state: { type: "string", enum: ["done", "next", "todo"] }
+                    }
+                  }
+                },
+                images: { type: "array", items: { type: "string", format: "uri" } },
+                notes: { type: "string" }
+              }
+            },
+            // diagram
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["type", "title", "lanes"],
+              properties: {
+                type: { const: "diagram" },
+                title: { type: "string" },
+                subhead: { type: "string" },
+                lanes: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["title", "items"],
+                    properties: {
+                      title: { type: "string" },
+                      items: { type: "array", items: { type: "string" } }
+                    }
+                  }
+                },
+                images: { type: "array", items: { type: "string", format: "uri" } },
+                notes: { type: "string" }
+              }
+            },
+            // cards
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["type", "title", "items"],
+              properties: {
+                type: { const: "cards" },
+                title: { type: "string" },
+                subhead: { type: "string" },
+                columns: { type: "integer", enum: [2, 3] },
+                items: {
+                  type: "array",
+                  items: {
+                    oneOf: [
+                      { type: "string" },
+                      {
+                        type: "object",
+                        additionalProperties: false,
+                        required: ["title"],
+                        properties: {
+                          title: { type: "string" },
+                          desc: { type: "string" }
+                        }
+                      }
+                    ]
+                  }
+                },
+                images: { type: "array", items: { type: "string", format: "uri" } },
+                notes: { type: "string" }
+              }
+            },
+            // headerCards
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["type", "title", "items"],
+              properties: {
+                type: { const: "headerCards" },
+                title: { type: "string" },
+                subhead: { type: "string" },
+                columns: { type: "integer", enum: [2, 3] },
+                items: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["title"],
+                    properties: {
+                      title: { type: "string" },
+                      desc: { type: "string" }
+                    }
+                  }
+                },
+                images: { type: "array", items: { type: "string", format: "uri" } },
+                notes: { type: "string" }
+              }
+            },
+            // table
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["type", "title", "headers", "rows"],
+              properties: {
+                type: { const: "table" },
+                title: { type: "string" },
+                subhead: { type: "string" },
+                headers: { type: "array", items: { type: "string" } },
+                rows: {
+                  type: "array",
+                  items: { type: "array", items: { type: "string" } }
+                },
+                notes: { type: "string" }
+              }
+            },
+            // progress
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["type", "title", "items"],
+              properties: {
+                type: { const: "progress" },
+                title: { type: "string" },
+                subhead: { type: "string" },
+                items: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["label", "percent"],
+                    properties: {
+                      label: { type: "string" },
+                      percent: { type: "number", minimum: 0, maximum: 100 }
+                    }
+                  }
+                },
+                notes: { type: "string" }
+              }
+            },
+            // quote
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["type", "title", "text", "author"],
+              properties: {
+                type: { const: "quote" },
+                title: { type: "string" },
+                subhead: { type: "string" },
+                text: { type: "string" },
+                author: { type: "string" },
+                notes: { type: "string" }
+              }
+            },
+            // kpi
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["type", "title", "items"],
+              properties: {
+                type: { const: "kpi" },
+                title: { type: "string" },
+                subhead: { type: "string" },
+                columns: { type: "integer", enum: [2, 3, 4] },
+                items: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["label", "value", "change", "status"],
+                    properties: {
+                      label: { type: "string" },
+                      value: { type: "string" },
+                      change: { type: "string" },
+                      status: { type: "string", enum: ["good", "bad", "neutral"] }
+                    }
+                  }
+                },
+                notes: { type: "string" }
+              }
+            },
+            // bulletCards
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["type", "title", "items"],
+              properties: {
+                type: { const: "bulletCards" },
+                title: { type: "string" },
+                subhead: { type: "string" },
+                items: {
+                  type: "array",
+                  maxItems: 3,
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["title", "desc"],
+                    properties: {
+                      title: { type: "string" },
+                      desc: { type: "string" }
+                    }
+                  }
+                },
+                notes: { type: "string" }
+              }
+            },
+            // faq
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["type", "title", "items"],
+              properties: {
+                type: { const: "faq" },
+                title: { type: "string" },
+                subhead: { type: "string" },
+                items: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["q", "a"],
+                    properties: {
+                      q: { type: "string" },
+                      a: { type: "string" }
+                    }
+                  }
+                },
+                notes: { type: "string" }
+              }
+            },
+            // statsCompare
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["type", "title", "leftTitle", "rightTitle", "stats"],
+              properties: {
+                type: { const: "statsCompare" },
+                title: { type: "string" },
+                subhead: { type: "string" },
+                leftTitle: { type: "string" },
+                rightTitle: { type: "string" },
+                stats: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["label", "leftValue", "rightValue"],
+                    properties: {
+                      label: { type: "string" },
+                      leftValue: { type: "string" },
+                      rightValue: { type: "string" },
+                      trend: { type: "string", enum: ["up", "down", "neutral"] }
+                    }
+                  }
+                },
+                notes: { type: "string" }
+              }
+            }
+          ]
+        }
+      }
+    }
+  };
+}
