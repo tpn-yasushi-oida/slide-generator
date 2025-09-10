@@ -51,14 +51,9 @@ function requestGemini(userInput) {
   const fullPrompt = getGeminiPrompt() + "\n\n" + userInput;
 
   const requestBody = {
-    contents: {
-      role: "user",
-      parts: [
-        {
-          text: fullPrompt,
-        },
-      ],
-    },
+    contents: [
+      { role: "user", parts: [{ text: fullPrompt }] }
+    ],
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: getSlideDataSchema()

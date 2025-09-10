@@ -1,5 +1,5 @@
 /**
- * Geminiの構造化出力でスライドデータを生成する
+ * Geminiの構造化出力でスライドデータを生成し、サンプル構造にクリーンアップ
  */
 function generateSlideData() {
   const testText = `
@@ -16,6 +16,7 @@ function generateSlideData() {
 ## 価格
 定価: 39,800円
   `;
+
   
   return requestGemini(testText);
 }
