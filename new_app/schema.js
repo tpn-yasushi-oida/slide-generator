@@ -132,7 +132,7 @@ function getSlideDataSchema() {
                     properties: {
                       label: { type: "string" },
                       date: { type: "string" },
-                      state: { type: "string", enum: ["done", "next,","todo"] }
+                      state: { type: "string", enum: ["done", "next","todo"] }
                     }
                   }
                 },
