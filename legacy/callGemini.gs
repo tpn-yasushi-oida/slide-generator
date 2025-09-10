@@ -29,7 +29,7 @@ function getAccessToken() {
 
   const signatureInput = Utilities.base64EncodeWebSafe(JSON.stringify(header)) + "." +
                         Utilities.base64EncodeWebSafe(JSON.stringify(payload));
-  const signature = Utilities.computeRsaSha256Signature(signatureInput, PERSED_PRIVATE_KEY);
+  const signature = Utilities.computeRsaSha256Signature(signatureInput, PARSED_PRIVATE_KEY);
 
   const jwt = signatureInput + "." + Utilities.base64EncodeWebSafe(signature);
 

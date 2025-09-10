@@ -40,3 +40,8 @@ function runTest() {
     throw error;
   }
 }
+
+
+function generateSlideData() {
+  // Geminiの構造化出力で出力したJSONデータを slide_generatorのslideDataのJavaScriptオブジェクト配列として入れる。
+}
