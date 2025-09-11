@@ -106,13 +106,13 @@ function testGeminiAPI() {
       return !v || v.trim() === "";
     });
     if (missing.length) {
-      Logger.log("エラー: 未設定のプロパティ: " + missing.join(", "));
+      console.log("エラー: 未設定のプロパティ: " + missing.join(", "));
       return false;
     }
 
     const token = getAccessToken();
     if (!token) {
-      Logger.log("エラー: アクセストークン取得失敗");
+      console.log("エラー: アクセストークン取得失敗");
       return false;
     }
 
@@ -120,15 +120,15 @@ function testGeminiAPI() {
     const res = requestGemini(testInput);
 
     if (!res || !Array.isArray(res.slideData) || !res.slideData.length) {
-      Logger.log("警告: slideData が不正または空");
+      console.log("警告: slideData が不正または空");
       return false;
     }
 
-    Logger.log("OK: slideData length = " + res.slideData.length);
-    Logger.log(JSON.stringify(res, null, 2));
+    console.log("OK: slideData length = " + res.slideData.length);
+    console.log(JSON.stringify(res, null, 2));
     return true;
   } catch (e) {
-    Logger.log("致命的エラー: " + e.message);
+    console.log("致命的エラー: " + e.message);
     return false;
   }
 }
