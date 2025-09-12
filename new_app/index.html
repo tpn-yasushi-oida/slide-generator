@@ -1024,11 +1024,11 @@
         // カスタムボタンの位置を取得
         const btnRect = customColorBtn.getBoundingClientRect();
         
-        // カラーピッカーを表示して画面外に配置（非表示）
+        // カラーピッカーを表示してボタンの近くに配置
         colorInput.style.display = "block";
         colorInput.style.position = "absolute";
-        colorInput.style.left = "-9999px";
-        colorInput.style.top = "-9999px";
+        colorInput.style.left = `${btnRect.left + window.scrollX}px`;
+        colorInput.style.top = `${btnRect.bottom + window.scrollY + 5}px`;
         colorInput.style.zIndex = "1000";
         colorInput.click();
         
