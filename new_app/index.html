@@ -58,8 +58,7 @@
     }
 
     .container {
-      max-width: 800px;
-      margin: 0 auto;
+      margin: 0;
       background: #fff;
       padding: 30px;
       flex: 1;
@@ -109,6 +108,13 @@
     .btn-area {
       text-align: center;
       vertical-align: middle;
+    }
+
+    .btn-area-center {
+      width: 100%;
+      text-align: center;
+      margin-top: 30px;
+      margin-bottom: 30px;
     }
 
     .submit-btn {
@@ -265,14 +271,16 @@
 
     .page-layout {
       display: grid;
-      grid-template-columns: 260px 1fr;
-      gap: 0;
+      grid-template-columns: 4fr 1fr;
+      gap: 20px;
       min-height: 100%;
     }
 
     .sidebar {
       width: 100%;
-      padding: 24px 20px 24px 24px;
+      padding: 24px 24px 24px 0;
+      display: flex;
+      flex-direction: column;
     }
 
     .main-area {
@@ -287,6 +295,9 @@
       border-radius: 12px;
       padding: 16px;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
     }
 
     .options-title {
@@ -304,6 +315,7 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
+      flex: 1;
     }
 
     .options-list .form-group {
@@ -369,12 +381,12 @@
       }
 
       .sidebar {
-        order: 1;
+        order: 2;
         padding: 20px 24px;
       }
 
       .main-area {
-        order: 2;
+        order: 1;
       }
 
       header {
@@ -448,7 +460,35 @@
     </header>
     
     <div class="page-layout">
-      <!-- 左: サイドバー（ヘッダー直下） -->
+      <!-- 左: メインエリア -->
+      <div class="main-area">
+        <div class="container">
+          <form onsubmit="event.preventDefault();">
+            <div class="main-message">
+              <h1>プレゼンテーションのイメージを教えてください</h1>
+            </div>
+            
+            <div class="form-group">
+              <textarea
+                id="prompt"
+                rows="18"
+                placeholder="作成したいプレゼンテーションの内容を入力してください。
+
+  スライドに含めたい内容をできるだけ細かく記述してください。
+  メモ書きをそのまま貼り付けても実行できます。
+  例）生成AIとは
+      1. 生成AIの仕組み
+      2. 生成AIでできる10のこと
+          文章作成
+          アイディア出し
+        ..."
+              ></textarea>
+            </div>
+          </form>
+        </div>
+      </div>
+      
+      <!-- 右: サイドバー -->
       <div class="sidebar">
         <div class="options-section">
           <h3 class="options-title">詳細オプション</h3>
@@ -515,46 +555,19 @@
           </div>
         </div>
       </div>
-      
-      <!-- 右: メインエリア -->
-      <div class="main-area">
-        <div class="container">
-          <form onsubmit="event.preventDefault();">
-            <div class="main-message">
-              <h1>プレゼンテーションのイメージを教えてください</h1>
-            </div>
-            
-            <div class="form-group">
-              <textarea
-                id="prompt"
-                rows="18"
-                placeholder="作成したいプレゼンテーションの内容を入力してください。
-
-  スライドに含めたい内容をできるだけ細かく記述してください。
-  メモ書きをそのまま貼り付けても実行できます。
-  例）生成AIとは
-      1. 生成AIの仕組み
-      2. 生成AIでできる10のこと
-          文章作成
-          アイディア出し
-        ..."
-              ></textarea>
-            </div>
-            
-            <div class="btn-area">
-              <button
-                type="submit"
-                id="slide-generate"
-                class="submit-btn"
-                onclick="handleSubmit(event)"
-              >
-                スライド生成
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
     </div>
+
+      <!-- スライド生成ボタン（全体中央配置） -->
+      <div class="btn-area-center">
+        <button
+          type="submit"
+          id="slide-generate"
+          class="submit-btn"
+          onclick="handleSubmit(event)"
+        >
+          スライド生成
+        </button>
+      </div>
 
       <div id="loading">
         <div class="loading-content">
