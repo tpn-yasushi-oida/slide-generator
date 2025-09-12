@@ -11,7 +11,7 @@
 // --- 1. 実行設定 ---
 const SETTINGS = {
 SHOULD_CLEAR_ALL_SLIDES: true,
-TARGET_PRESENTATION_ID: null
+TARGET_PRESENTATION_ID: "TARGET_PRESENTATION_ID: 1SZKhjWDivWMJW4ycwN2yB34l1skSqcynkleyWbbgyic"
 };
 
 // --- 2. マスターデザイン設定 (Pixel Perfect Ver.) ---
@@ -155,6 +155,7 @@ FOOTER_TEXT: `© ${new Date().getFullYear()} Google Inc.`
 };
 
 // --- 3. スライドデータ（サンプル：必ず置換してください） ---
+// 変更：generatePresentation() に引数だ渡すように変更 
 // const slideData = [
 //   { type: 'title', title: 'Google Workspace 新機能提案', date: '2025.08.24', notes: '本日は、AIを活用した新しいコラボレーション機能についてご提案します。' },
 //   {
@@ -191,8 +192,6 @@ FOOTER_TEXT: `© ${new Date().getFullYear()} Google Inc.`
 //   { type: 'closing', notes: '本日のご提案は以上です。ご清聴いただき、ありがとうございました。' }
 // ];
 
-const slideData = generateSlideData();
-
 // --- 4. メイン実行関数（エントリーポイント） ---
 let __SECTION_COUNTER = 0; // 章番号カウンタ（ゴースト数字用）
 
@@ -201,7 +200,7 @@ let __SECTION_COUNTER = 0; // 章番号カウンタ（ゴースト数字用）
  * 実行時間: 約3-6分
  * 最大スライド数: 50枚
  */
-function generatePresentation() {
+function generatePresentation(slideData, initialized_slide) {
   const userSettings = PropertiesService.getScriptProperties().getProperties();
   if (userSettings.primaryColor) CONFIG.COLORS.primary_color = userSettings.primaryColor;
   if (userSettings.footerText) CONFIG.FOOTER_TEXT = userSettings.footerText;
@@ -209,17 +208,17 @@ function generatePresentation() {
   if (userSettings.closingLogoUrl) CONFIG.LOGOS.closing = userSettings.closingLogoUrl;
   if (userSettings.fontFamily) CONFIG.FONTS.family = userSettings.fontFamily;
 
-  let presentation;
+  let presentation = initialized_slide;
   try {
-    presentation = SETTINGS.TARGET_PRESENTATION_ID
-      ? SlidesApp.openById(SETTINGS.TARGET_PRESENTATION_ID)
-      : SlidesApp.getActivePresentation();
-    if (!presentation) throw new Error('対象のプレゼンテーションが見つかりません。');
+  //   presentation = SETTINGS.TARGET_PRESENTATION_ID
+  //     ? SlidesApp.openById(SETTINGS.TARGET_PRESENTATION_ID)
+  //     : SlidesApp.getActivePresentation();
+  //   if (!presentation) throw new Error('対象のプレゼンテーションが見つかりません。');
 
-    if (SETTINGS.SHOULD_CLEAR_ALL_SLIDES) {
-      const slides = presentation.getSlides();
-      for (let i = slides.length - 1; i >= 0; i--) slides[i].remove();
-    }
+  //   if (SETTINGS.SHOULD_CLEAR_ALL_SLIDES) {
+  //     const slides = presentation.getSlides();
+  //     for (let i = slides.length - 1; i >= 0; i--) slides[i].remove();
+  //   }
 
     __SECTION_COUNTER = 0;
 
@@ -249,6 +248,10 @@ function generatePresentation() {
         Logger.log(`スライドの生成をスキップしました (エラー発生)。 Type: ${data.type}, Title: ${data.title || 'N/A'}, Error: ${e.message}`);
       }
     }
+
+    // プレゼンテーションのURLを返却
+    const url = presentation.getUrl();
+    return url;
 
   } catch (e) {
     Logger.log(`処理が中断されました: ${e.message}\nStack: ${e.stack}`);
