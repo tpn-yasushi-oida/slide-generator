@@ -486,13 +486,13 @@
               rows="15"
               placeholder="作成したいプレゼンテーションの内容を入力してください。
               
-              スライドに含めたい内容をできるだけ細かく記述してください。
-              メモ書きをそのまま貼り付けても実行できます。
-  例）生成AIとは
-  1. 生成AIの仕組み
-  2. 生成AIでできる10のこと
-  文章作成
-  アイディア出し
+  スライドに含めたい内容をできるだけ細かく記述してください。
+  メモ書きをそのまま貼り付けても実行できます。
+    例）生成AIとは
+    1. 生成AIの仕組み
+    2. 生成AIでできる10のこと
+    文章作成
+    アイディア出し
   ..."
   ></textarea>
 </div>
@@ -502,9 +502,7 @@
 
 <!-- 右: サイドバー -->
 <div class="sidebar">
-        <div class="options-section">
-          <h3 class="options-title">詳細オプション</h3>
-          
+        <div class="options-section">          
           <div class="options-list">
             <!-- primaryColor -->
             <div class="form-group">
@@ -652,6 +650,60 @@
       showCustomAlert("処理がキャンセルされました。");
     }
 
+    // スライドデータ生成関数
+    function generateSlideData(userInput, options) {
+      const loadingElement = document.getElementById("loading");
+      const linkButton = document.getElementById("link-to-slide");
+
+      isCancelled = false; // 処理開始時にキャンセルフラグをリセット
+
+      google.script.run
+        .withSuccessHandler((response) => {
+          if (isCancelled) {
+            console.log("キャンセルされたため処理を停止");
+            return;
+          }
+          console.log("成功:", response);
+          if (loadingElement) {
+            loadingElement.style.display = "none";
+          }
+          showCustomAlert("スライド生成が完了しました！");
+          // リンクを更新
+          if (linkButton) {
+            linkButton.onclick = () => window.open(response.url, "_blank");
+            linkButton.style.display = "inline-flex";
+          }
+        })
+        .withFailureHandler((error) => {
+          if (isCancelled) {
+            console.log("キャンセルされたためエラー処理を無視");
+            return;
+          }
+          console.error("エラー:", error);
+          if (loadingElement) {
+            loadingElement.style.display = "none";
+          }
+          showCustomAlert("エラーが発生しました。もう一度お試しください。");
+        })
+        .runGeneration({ 
+          prompt: userInput, 
+          generateOption: undefined,
+          primaryColor: options.primaryColor,
+          footerText: options.footerText,
+          headerLogoUrl: options.headerLogoUrl,
+          closingLogoUrl: options.closingLogoUrl,
+          fontFamily: options.fontFamily
+        });
+
+      google.script.run.outputLog(userInput, undefined, "slide-generate", {
+        primaryColor: options.primaryColor,
+        footerText: options.footerText,
+        headerLogoUrl: options.headerLogoUrl,
+        closingLogoUrl: options.closingLogoUrl,
+        fontFamily: options.fontFamily
+      });
+    }
+
     async function handleSubmit(event) {
       event.preventDefault(); // フォーム送信のリロードを防止
 
@@ -671,9 +723,7 @@
       }
 
       // パラメータ取得
-      const prompt = document.getElementById("prompt")?.value || undefined;
-      const generateOption =
-        document.getElementById("generate-option")?.value || undefined;
+      const userInput = document.getElementById("prompt")?.value || undefined;
       
       // オプション値取得
       const primaryColor = document.getElementById("primary-color")?.value || "#111111";
@@ -686,7 +736,7 @@
       // フォントファミリーの最終値を決定
       const fontFamily = fontFamilySelect === "custom" && customFontFamily ? customFontFamily : fontFamilySelect;
 
-      if (!prompt) {
+      if (!userInput) {
         if (loadingElement) {
           loadingElement.style.display = "none";
         }
@@ -695,10 +745,20 @@
       }
 
       // ボタンIDに応じた処理
-      let apiMethod;
       if (buttonId === "slide-generate") {
         console.log("スライド生成を実行");
-        apiMethod = "runGeneration"; // 単一ルート: スライド生成
+        
+        // オプションをオブジェクトにまとめる
+        const options = {
+          primaryColor,
+          footerText,
+          headerLogoUrl,
+          closingLogoUrl,
+          fontFamily
+        };
+
+        // generateSlideData関数を呼び出し
+        generateSlideData(userInput, options);
       } else {
         console.error("不明なボタンIDです");
         if (loadingElement) {
@@ -707,54 +767,6 @@
         showCustomAlert("不明な操作が行われました。再度お試しください。");
         return;
       }
-
-      isCancelled = false; // 処理開始時にキャンセルフラグをリセット
-
-      google.script.run
-        .withSuccessHandler((response) => {
-          if (isCancelled) {
-            console.log("キャンセルされたため処理を停止");
-            return;
-          }
-          console.log("成功:", response);
-          if (loadingElement) {
-            loadingElement.style.display = "none";
-          }
-          showCustomAlert("スライド生成が完了しました！");
-          // リンクを更新
-          if (linkButton) {
-            linkButton.onclick = () => window.open(response.url, "_blank"); // リンクをGoogle Apps Scriptの結果に設定
-            linkButton.style.display = "inline-flex";
-          }
-        })
-        .withFailureHandler((error) => {
-          if (isCancelled) {
-            console.log("キャンセルされたためエラー処理を無視");
-            return;
-          }
-          console.error("エラー:", error);
-          if (loadingElement) {
-            loadingElement.style.display = "none";
-          }
-          showCustomAlert("エラーが発生しました。もう一度お試しください。");
-        })
-        [apiMethod]({ 
-          prompt, 
-          generateOption,
-          primaryColor,
-          footerText,
-          headerLogoUrl,
-          closingLogoUrl,
-          fontFamily
-        }); // 全オプション値を含めてAPI呼び出し
-
-      google.script.run.outputLog(prompt, generateOption, buttonId, {
-        primaryColor,
-        footerText,
-        headerLogoUrl,
-        closingLogoUrl,
-        fontFamily
-      });
     }
 
     // カスタムアラートを表示する

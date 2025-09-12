@@ -204,11 +204,11 @@ let __SECTION_COUNTER = 0; // 章番号カウンタ（ゴースト数字用）
 
 function generatePresentation(slideData, options) {
   // [変更点]: 引数に設定し、引数で上書きする仕様に
-  if (options.fontFamily) CONFIG.FONTS.family = fontFamily;
-  if (options.primaryColor) CONFIG.COLORS.primary_color = primaryColor;
-  if (options.footerText) CONFIG.FOOTER_TEXT = footerText;
-  if (options.headerLogoUrl) CONFIG.LOGOS.header = headerLogoUrl;
-  if (options.closingLogoUrl) CONFIG.LOGOS.closing = closingLogoUrl;
+  if (options.primaryColor) CONFIG.COLORS.primary_color = options.primaryColor;
+  if (options.fontFamily) CONFIG.FONTS.family = options.fontFamily;
+  if (options.footerText) CONFIG.FOOTER_TEXT = options.footerText;
+  if (options.headerLogoUrl) CONFIG.LOGOS.header = options.headerLogoUrl;
+  if (options.closingLogoUrl) CONFIG.LOGOS.closing = options.closingLogoUrl;
 
   // [変更点]: スライドを生成するようにinitSlide/initSlide()を作成。
   const title = slideData?.[0]?.title || "[AIスライド生成]プレゼンテーション";

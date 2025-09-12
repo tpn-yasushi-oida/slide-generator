@@ -15,13 +15,14 @@ function testJson2Slide() {
 }
 
 function testJson2SlideWithSetting() { 
-  const primaryColor = '#ff0000'
-  const footerText = "© TOPPAN Inc."
-  const headerLogoUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQaWj9IAldlS2r14RkWuKTyOvLs2csIH8rsxA&s"
-  const closingLogoUrl = "https://i.ytimg.com/vi/u-N7jG6T7UA/maxresdefault.jpg"
-  const fontFamily = "Murecho"
-  // const options = validationUserOptions(primaryColor, footerText, headerLogoUrl, closingLogoUrl, fontFamily)
-  const slideUrl = generatePresentation(mockSlideData, primaryColor, footerText, headerLogoUrl, closingLogoUrl, fontFamily)
+  const options = {
+    primaryColor: '#ff0000',
+    footerText: "© TOPPAN Inc.",
+    headerLogoUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQaWj9IAldlS2r14RkWuKTyOvLs2csIH8rsxA&s",
+    closingLogoUrl: "https://i.ytimg.com/vi/u-N7jG6T7UA/maxresdefault.jpg",
+    fontFamily: "Murecho"
+  }
+  const slideUrl = generatePresentation(mockSlideData, options)
   console.log(slideUrl)
 }
 
