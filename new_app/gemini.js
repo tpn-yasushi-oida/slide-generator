@@ -46,7 +46,7 @@ function requestGemini(userInput) {
     `https://${REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}`
     + `/publishers/google/models/${GEMINI_MODEL}:generateContent`;
 
-  const fullPrompt = getGeminiPrompt() + "\n\n" + userInput;
+  const fullPrompt = getGeminiPrompt(userInput) + "\n\n" + userInput;
 
   const requestBody = {
     contents: [

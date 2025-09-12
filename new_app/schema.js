@@ -200,7 +200,7 @@ function getSlideDataSchema() {
             {
               type: "object",
               additionalProperties: false,
-              required: ["type", "title", "items"],
+              required: ["type", "title", "items", "columns"],
               properties: {
                 type: { type: "string", enum: ["headerCards"] },
                 title: { type: "string" },
