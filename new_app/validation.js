@@ -357,3 +357,7 @@ function validateAndNormalizeSlideData(result) {
 
   return out;
 }
+
+// function validationUserOptions(){
+  
+// }

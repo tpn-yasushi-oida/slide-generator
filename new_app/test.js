@@ -1,14 +1,4 @@
 /**
- * 単体テスト
- */
-function testCreateSlide() {
-    let presentation = initSlide("てすと");
-    const slideURL = presentation.getUrl()
-    console.log(`slideURL: ${slideURL}`);
-}
-
-
-/**
  * ユニットテスト
  */
 function testGenerateJson() { 
@@ -30,6 +20,7 @@ function testJson2SlideWithSetting() {
   const headerLogoUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQaWj9IAldlS2r14RkWuKTyOvLs2csIH8rsxA&s"
   const closingLogoUrl = "https://i.ytimg.com/vi/u-N7jG6T7UA/maxresdefault.jpg"
   const fontFamily = "Murecho"
+  // const options = validationUserOptions(primaryColor, footerText, headerLogoUrl, closingLogoUrl, fontFamily)
   const slideUrl = generatePresentation(mockSlideData, primaryColor, footerText, headerLogoUrl, closingLogoUrl, fontFamily)
   console.log(slideUrl)
 }
