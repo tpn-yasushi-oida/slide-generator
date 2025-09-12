@@ -40,17 +40,15 @@ function getAccessToken() {
  * - generationConfig に responseMimeType と responseSchema を設定
  * - レスポンスは candidates[0].content.parts[0].text にJSON文字列で入る想定
  */
-function requestGemini(userInput) {
+function requestGemini(prompt) {
   const token = getAccessToken();
   const geminiEndpoint =
     `https://${REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}`
     + `/publishers/google/models/${GEMINI_MODEL}:generateContent`;
 
-  const fullPrompt = getGeminiPrompt(userInput) + "\n\n" + userInput;
-
   const requestBody = {
     contents: [
-      { role: "user", parts: [{ text: fullPrompt }] }
+      { role: "user", parts: [{ text: prompt }] }
     ],
     generationConfig: {
       responseMimeType: "application/json",
