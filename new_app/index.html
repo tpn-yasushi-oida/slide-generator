@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SlideGenerator2</title>
+    <title>SlideGenerator</title>
   </head>
   <link
     rel="stylesheet"
@@ -28,6 +28,9 @@
     }
 
     header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       text-align: left;
       margin-bottom: 40px;
       margin-left: 0;
@@ -270,10 +273,27 @@
       padding: 24px;
     }
 
-    header {
-      text-align: left;
-      margin-bottom: 40px;
-      margin-left: 0;
+    /* 旧アプリボタン */
+    .old-app-button {
+      padding: 6px 12px;
+      font-size: 0.75rem;
+      background-color: #f8f9fa;
+      color: #6c757d;
+      border: 1px solid #e9ecef;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s, color 0.2s;
+      font-family: inherit;
+    }
+
+    .old-app-button:hover {
+      background-color: #e9ecef;
+      color: #495057;
+    }
+
+    .old-app-button:active {
+      background-color: #dee2e6;
+      transform: translateY(1px);
     }
 
     .page-title {
@@ -476,6 +496,7 @@
   <body>
     <header>
       <h1>SlideGenerator2</h1>
+      <button id="old-app-btn" class="old-app-button" onclick="openOldApp()" title="アップデート前のアプリを利用されたい方はこちら">旧アプリを使用</button>
     </header>
     
     <!-- ページタイトル -->
@@ -570,7 +591,7 @@
               <input 
                 type="url" 
                 id="header-logo-url" 
-                placeholder="https://example.com/logo.png"
+                placeholder="https://example.com/logo.png（画像の公開URLを貼付）"
                 class="text-input"
               />
             </div>
@@ -583,7 +604,7 @@
               <input 
                 type="url" 
                 id="closing-logo-url" 
-                placeholder="https://example.com/logo.png"
+                placeholder="https://example.com/logo.png（画像の公開URLを貼付）"
                 class="text-input"
               />
             </div>
@@ -642,6 +663,11 @@
   </body>
   <script>
     let isCancelled = false; // キャンセルフラグ
+
+    // 旧アプリを新規タブで開く
+    function openOldApp() {
+      window.open('https://script.google.com/a/macros/toppan.co.jp/s/AKfycbwzKtXGXlIYmz39nENL4YTxNlksseujJhOM0KNEaH09nSms9_CWdDUYqmXNYXrsloo/exec', '_blank');
+    }
 
     // フォントファミリー選択時の処理
     function handleFontFamilyChange() {

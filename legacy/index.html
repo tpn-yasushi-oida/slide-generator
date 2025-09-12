@@ -9,12 +9,12 @@
     rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,-25..0"
   />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400&family=Material+Symbols+Outlined&family=Reddit+Sans:wght@400;500&display=swap"
-    rel="stylesheet"
-  />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400&family=Material+Symbols+Outlined&family=Reddit+Sans:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
   <style>
     * {
       margin: 0;
@@ -29,33 +29,37 @@
     }
 
     header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       text-align: left;
       margin-bottom: 40px;
       margin-left: 0;
     }
 
     header h1 {
-      font-family: "Reddit Sans", sans-serif;
+      font-family: 'Reddit Sans', sans-serif;
       font-size: 1.4rem;
       font-weight: 400;
-      letter-spacing: 0.1rem;
+      letter-spacing: .1rem;
       color: rgb(127, 127, 127);
       margin: 0;
       padding-bottom: 5px;
     }
 
-    footer {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 35px; /* 固定高さ */
-      text-align: center;
-      font-size: 0.875rem;
-      color: #6c757d;
-      padding: 0.5rem 0;
-      z-index: 10;
-    }
+  footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 35px; /* 固定高さ */
+    text-align: center;
+    font-size: 0.875rem;
+    color: #6c757d;
+    padding: 0.5rem 0;
+    z-index: 10;
+  }
+
 
     .container {
       max-width: 800px;
@@ -234,10 +238,39 @@
     #custom-alert button:hover {
       background-color: #e64a19;
     }
+
+    /* 新アプリボタン */
+    .new-app-button {
+      padding: 10px 16px;
+      font-size: 0.85rem;
+      background-color: #ffdd00;
+      color: #333;
+      border: 2px solid #ffc107;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-family: inherit;
+      font-weight: 600;
+      box-shadow: 0 2px 4px rgba(255, 221, 0, 0.3);
+    }
+
+    .new-app-button:hover {
+      background-color: #ffc107;
+      border-color: #ffb300;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(255, 221, 0, 0.4);
+    }
+
+    .new-app-button:active {
+      background-color: #ffb300;
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(255, 221, 0, 0.2);
+    }
   </style>
   <body>
     <header>
       <h1>SlideGenerator</h1>
+      <button id="new-app-btn" class="new-app-button" onclick="openNewApp()" title="より豪華なデザインのスライド生成が可能です。">新バージョンを使用</button>
     </header>
     <div class="container">
       <form onsubmit="event.preventDefault();">
@@ -275,20 +308,10 @@ b. カスタム生成の場合
           ></textarea>
         </div>
         <div class="btn-area">
-          <button
-            type="submit"
-            id="auto-generate"
-            class="submit-btn"
-            onclick="handleSubmit(event)"
-          >
+          <button type="submit" id="auto-generate" class="submit-btn" onclick="handleSubmit(event)">
             <span class="material-symbols-outlined"> book </span>おまかせ生成
           </button>
-          <button
-            type="submit"
-            id="custom-generate"
-            class="submit-btn"
-            onclick="handleSubmit(event)"
-          >
+          <button type="submit" id="custom-generate" class="submit-btn" onclick="handleSubmit(event)">
             <span class="material-symbols-outlined"> draw </span>カスタム生成
           </button>
         </div>
@@ -298,9 +321,7 @@ b. カスタム生成の場合
         <div class="loading-content">
           <div class="spinner"></div>
           <p>作成中...</p>
-          <button id="cancel-loading" onclick="cancelLoading()">
-            キャンセル
-          </button>
+          <button id="cancel-loading" onclick="cancelLoading()">キャンセル</button>
         </div>
       </div>
       <div id="custom-alert-overlay">
@@ -313,21 +334,22 @@ b. カスタム生成の場合
       </div>
 
       <div class="btn-area">
-        <button
-          id="link-to-slide"
-          class="submit-btn"
-          onclick="window.open('', '_blank');"
-        >
+        <button id="link-to-slide" class="submit-btn" onclick="window.open('', '_blank');">
           <!-- 出力されたGSlideのリンクが入る -->
-          <span class="material-symbols-outlined"> open_in_new </span
-          >スライドをチェック
+          <span class="material-symbols-outlined"> open_in_new </span>スライドをチェック
         </button>
       </div>
     </div>
     <footer>© 2025 TOPPAN Inc. AI Powered Project.</footer>
   </body>
   <script>
+
     let isCancelled = false; // キャンセルフラグ
+
+    // 新アプリを新規タブで開く
+    function openNewApp() {
+      window.open('https://script.google.com/a/macros/toppan.co.jp/s/AKfycby7Zf4oX-a7bb586HsWQYCKuUpKxLcIJG6vo4LOoZL1_2UwMX-yHw22yfww0ssCuI8/exec', '_blank');
+    }
 
     // キャンセルボタンの処理
     function cancelLoading() {
@@ -359,8 +381,7 @@ b. カスタム生成の場合
 
       // パラメータ取得
       const prompt = document.getElementById("prompt")?.value || undefined;
-      const generateOption =
-        document.getElementById("generate-option")?.value || undefined;
+      const generateOption = document.getElementById("generate-option")?.value || undefined;
 
       if (!prompt) {
         if (loadingElement) {
@@ -416,8 +437,7 @@ b. カスタム生成の場合
             loadingElement.style.display = "none";
           }
           showCustomAlert("エラーが発生しました。もう一度お試しください。");
-        })
-        [apiMethod](prompt, generateOption); // おまかせ生成かカスタム生成かで処理を分岐
+        })[apiMethod](prompt, generateOption); // おまかせ生成かカスタム生成かで処理を分岐
 
       google.script.run.outputLog(prompt, generateOption, buttonId);
     }
@@ -425,9 +445,7 @@ b. カスタム生成の場合
     // カスタムアラートを表示する
     function showCustomAlert(message) {
       const alertOverlay = document.getElementById("custom-alert-overlay");
-      const alertMessageElement = document.getElementById(
-        "custom-alert-message"
-      );
+      const alertMessageElement = document.getElementById("custom-alert-message");
 
       if (alertOverlay && alertMessageElement) {
         alertMessageElement.textContent = message; // メッセージを設定
@@ -442,5 +460,6 @@ b. カスタム生成の場合
         alertOverlay.style.display = "none"; // 非表示
       }
     }
+    
   </script>
 </html>
