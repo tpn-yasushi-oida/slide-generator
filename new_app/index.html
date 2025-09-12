@@ -414,6 +414,66 @@
       border-radius: 6px;
     }
 
+    /* カラーボタンのスタイル */
+    .color-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 4px;
+    }
+
+    .color-btn {
+      width: 28px;
+      height: 28px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .color-btn:hover {
+      transform: scale(1.1);
+      border-color: #333;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .color-btn.active {
+      border-color: #333;
+      border-width: 3px;
+      box-shadow: 0 0 0 2px rgba(51, 51, 51, 0.2);
+    }
+
+    .custom-color-btn {
+      width: 28px;
+      height: 28px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      cursor: pointer;
+      background: linear-gradient(45deg, 
+        #ff0000 0%, #ff8000 14.28%, #ffff00 28.56%, 
+        #80ff00 42.84%, #00ff00 57.12%, #00ff80 71.4%, 
+        #0080ff 85.68%, #8000ff 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .custom-color-btn:hover {
+      transform: scale(1.1);
+      border-color: #333;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .custom-color-btn span {
+      color: white;
+      font-size: 14px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    }
+
     /* レスポンシブ対応 */
     @media (max-width: 768px) {
       body {
@@ -495,6 +555,21 @@
         gap: 8px;
       }
 
+      /* モバイル版でのカラーボタン調整 */
+      .color-buttons {
+        gap: 6px;
+      }
+
+      .color-btn,
+      .custom-color-btn {
+        width: 24px;
+        height: 24px;
+      }
+
+      .custom-color-btn span {
+        font-size: 12px;
+      }
+
       header {
         padding: 16px 0 12px 20px;
       }
@@ -548,7 +623,20 @@
             <!-- primaryColor -->
             <div class="form-group">
               <label for="primary-color">メインカラー</label>
-              <input type="color" id="primary-color" value="#145599" />
+              <div class="color-buttons">
+                <button type="button" class="color-btn active" onclick="setColor('#145599', this)" style="background-color: #145599;" title="デフォルト"></button>
+                <button type="button" class="color-btn" onclick="setColor('#4F46E5', this)" style="background-color: #4F46E5;" title="Indigo"></button>
+                <button type="button" class="color-btn" onclick="setColor('#7C3AED', this)" style="background-color: #7C3AED;" title="Violet"></button>
+                <button type="button" class="color-btn" onclick="setColor('#C026D3', this)" style="background-color: #C026D3;" title="Fuchsia"></button>
+                <button type="button" class="color-btn" onclick="setColor('#0284C7', this)" style="background-color: #0284C7;" title="Sky"></button>
+                <button type="button" class="color-btn" onclick="setColor('#0D9488', this)" style="background-color: #0D9488;" title="Teal"></button>
+                <button type="button" class="color-btn" onclick="setColor('#F97316', this)" style="background-color: #F97316;" title="Orange"></button>
+                <button type="button" class="color-btn" onclick="setColor('#E11D48', this)" style="background-color: #E11D48;" title="Rose"></button>
+                <button type="button" class="custom-color-btn" onclick="showCustomColorPicker()" title="カスタムカラー">
+                  <span class="material-symbols-outlined">palette</span>
+                </button>
+              </div>
+              <input type="color" id="primary-color" value="#145599" style="display: none;" />
             </div>
             <!-- fontFamily -->
             <div class="form-group">
@@ -895,6 +983,54 @@
       const alertOverlay = document.getElementById("custom-alert-overlay");
       if (alertOverlay) {
         alertOverlay.style.display = "none"; // 非表示
+      }
+    }
+
+    // カラーボタン関連の関数
+    function setColor(colorCode, buttonElement) {
+      // 隠しカラーピッカーに値を設定
+      const colorInput = document.getElementById("primary-color");
+      if (colorInput) {
+        colorInput.value = colorCode;
+      }
+      
+      // すべてのカラーボタンからactiveクラスを除去
+      const allColorBtns = document.querySelectorAll(".color-btn");
+      allColorBtns.forEach(btn => btn.classList.remove("active"));
+      
+      // クリックされたボタンにactiveクラスを追加
+      if (buttonElement) {
+        buttonElement.classList.add("active");
+      }
+      
+      console.log(`色が変更されました: ${colorCode}`);
+    }
+
+    function showCustomColorPicker() {
+      const colorInput = document.getElementById("primary-color");
+      if (colorInput) {
+        // カラーピッカーを一時的に表示してクリック
+        colorInput.style.display = "block";
+        colorInput.style.position = "absolute";
+        colorInput.style.left = "-9999px";
+        colorInput.click();
+        
+        // 色が選択されたときの処理
+        colorInput.addEventListener("change", function handleColorChange() {
+          const selectedColor = this.value;
+          
+          // すべてのカラーボタンからactiveクラスを除去
+          const allColorBtns = document.querySelectorAll(".color-btn");
+          allColorBtns.forEach(btn => btn.classList.remove("active"));
+          
+          console.log(`カスタム色が選択されました: ${selectedColor}`);
+          
+          // カラーピッカーを再び非表示に
+          this.style.display = "none";
+          
+          // イベントリスナーを削除（重複防止）
+          this.removeEventListener("change", handleColorChange);
+        }, { once: true });
       }
     }
   </script>
