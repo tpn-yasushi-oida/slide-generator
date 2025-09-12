@@ -9,10 +9,11 @@ function testCreateSlide() {
  * ユニットテスト
  */
 function testGenerateJson() { 
-  const raw = requestGemini(mockUserInput);
-  const cleaned = validateAndNormalizeSlideData(raw);
-  console.log(JSON.stringify(cleaned, null, 2));
-  return cleaned;
+    const prompt = getGeminiPrompt(mockUserInput)
+    const raw = requestGemini(prompt);
+    const cleaned = validateAndNormalizeSlideData(raw);
+    console.log(JSON.stringify(cleaned, null, 2));
+    return cleaned;
 }
 
 function testJson2Slide() { 
