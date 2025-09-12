@@ -182,6 +182,7 @@ const mockSlideData = [
     {
         "type": "headerCards",
         "title": "部門別活用シナリオ",
+        "columns": 3,
         "items": [
         { "title": "営業部門", "desc": "提案のパーソナライズ" },
         { "title": "マーケティング部門", "desc": "コンテンツの大量生成" },
