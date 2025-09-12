@@ -62,21 +62,33 @@
       margin: 0 auto;
       background: #fff;
       padding: 30px;
+      flex: 1;
     }
+    
     .container h1 {
       padding: 5px 0;
       text-align: center;
+      margin-bottom: 10px;
     }
 
     form {
       display: flex;
       flex-direction: column;
-      gap: 18px;
+      gap: 20px;
+      height: 100%;
     }
 
     .form-group {
       display: flex;
       flex-direction: column;
+      flex: 1;
+    }
+
+    .form-group textarea {
+      width: 100%;
+      height: 400px;
+      resize: vertical;
+      flex: 1;
     }
 
     textarea {
@@ -235,62 +247,90 @@
       background-color: #e64a19;
     }
 
-    /* オプション欄のスタイリング */
-    .options-section {
-      margin-bottom: 18px;
+    /* ページレイアウト */
+    body {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
     }
 
-    .options-toggle {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 15px 20px;
-      background: #f8f8f8;
-      border-radius: 15px;
-      cursor: pointer;
-      transition: background-color 0.2s;
-      font-size: 0.9rem;
-      color: #555;
-      user-select: none;
-    }
-
-    .options-toggle:hover {
-      background: #f0f0f0;
-    }
-
-    .options-content {
-      margin-top: 15px;
-      padding: 20px;
-      background: #fafafa;
-      border-radius: 15px;
-      border: 1px solid #f0f0f0;
-    }
-
-    .options-content .form-group {
-      margin-bottom: 15px;
-    }
-
-    .options-content .form-group:last-child {
+    header {
+      grid-column: 1 / -1;
+      text-align: left;
       margin-bottom: 0;
+      padding: 24px 0 20px 24px;
     }
 
-    .options-content label {
-      display: block;
+    .page-layout {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 0;
+      min-height: 100%;
+    }
+
+    .sidebar {
+      width: 100%;
+      padding: 24px 20px 24px 24px;
+      background: #f9f9f9;
+      border-right: 1px solid #eaeaea;
+    }
+
+    .main-area {
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+    }
+
+    /* サイドバーオプションのスタイリング */
+    .options-section {
+      background: #ffffff;
+      border-radius: 12px;
+      border: 1px solid #e5e5e5;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .options-title {
+      font-family: "Reddit Sans", sans-serif;
       font-size: 0.85rem;
+      font-weight: 500;
+      color: #555;
+      margin-bottom: 14px;
+      text-align: center;
+      border-bottom: 1px solid #f0f0f0;
+      padding-bottom: 8px;
+    }
+
+    .options-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .options-list .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .options-list label {
+      display: block;
+      font-size: 0.75rem;
       color: #666;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       font-weight: 500;
     }
 
     .text-input,
     .select-input {
       width: 100%;
-      padding: 12px 20px;
-      font-size: 0.85rem;
+      padding: 8px 12px;
+      font-size: 0.75rem;
       outline: none;
       background: #fff;
       border: 1px solid #e0e0e0;
-      border-radius: 10px;
+      border-radius: 8px;
       color: #333;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
@@ -303,10 +343,10 @@
 
     input[type="color"] {
       width: 60px;
-      height: 40px;
+      height: 32px;
       padding: 0;
       border: 1px solid #e0e0e0;
-      border-radius: 8px;
+      border-radius: 6px;
       cursor: pointer;
       background: none;
     }
@@ -319,38 +359,107 @@
       border: none;
       border-radius: 6px;
     }
+
+    /* レスポンシブ対応 */
+    @media (max-width: 768px) {
+      body {
+        grid-template-rows: auto auto 1fr;
+      }
+
+      .page-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+      }
+
+      .sidebar {
+        order: 1;
+        padding: 20px 24px;
+        background: #f9f9f9;
+        border-right: none;
+        border-bottom: 1px solid #eaeaea;
+      }
+
+      .main-area {
+        order: 2;
+      }
+
+      header {
+        padding: 20px 0 15px 24px;
+      }
+
+      .form-group textarea {
+        height: 280px;
+      }
+
+      .options-section {
+        padding: 14px;
+      }
+
+      .options-title {
+        font-size: 0.8rem;
+        margin-bottom: 12px;
+      }
+
+      .options-list {
+        gap: 10px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .sidebar {
+        padding: 15px 20px;
+      }
+
+      .container {
+        padding: 20px;
+      }
+
+      .form-group textarea {
+        height: 250px;
+        padding: 12px 15px;
+        font-size: 0.85rem;
+      }
+
+      .options-section {
+        padding: 12px;
+      }
+
+      .text-input,
+      .select-input {
+        padding: 6px 10px;
+        font-size: 0.7rem;
+      }
+
+      .options-list label {
+        font-size: 0.7rem;
+        margin-bottom: 4px;
+      }
+
+      .options-list {
+        gap: 8px;
+      }
+
+      header {
+        padding: 16px 0 12px 20px;
+      }
+
+      header h1 {
+        font-size: 1.2rem;
+      }
+    }
   </style>
   <body>
     <header>
       <h1>SlideGenerator2</h1>
     </header>
-    <div class="container">
-      <form onsubmit="event.preventDefault();">
-        <div class="main-message">
-          <h1>プレゼンテーションのイメージを教えてください</h1>
-        </div>
-        <div class="form-group">
-          <textarea
-            id="prompt"
-            rows="17"
-            placeholder="作成したいプレゼンテーションの内容を入力してください。
-
-  スライドに含めたい内容をできるだけ細かく記述してください。
-  メモ書きをそのまま貼り付けても実行できます。
-  例）生成AIとは
-      1. 生成AIの仕組み
-      2. 生成AIでできる10のこと
-          文章作成
-          アイディア出し
-        ..."
-          ></textarea>
-        </div>
-        
-        <!-- 詳細オプション -->
+    
+    <div class="page-layout">
+      <!-- 左: サイドバー（ヘッダー直下） -->
+      <div class="sidebar">
         <div class="options-section">
           <h3 class="options-title">詳細オプション</h3>
           
-          <div class="options-grid">
+          <div class="options-list">
             <!-- primaryColor -->
             <div class="form-group">
               <label for="primary-color">プライマリーカラー:</label>
@@ -392,7 +501,7 @@
             </div>
             
             <!-- fontFamily -->
-            <div class="form-group font-group">
+            <div class="form-group">
               <label for="font-family">フォント:</label>
               <select id="font-family" class="select-input" onchange="handleFontFamilyChange()">
                 <option value="Helvetica Neue">Helvetica Neue（デフォルト）</option>
@@ -406,23 +515,52 @@
                 id="custom-font-family" 
                 placeholder="フォントファミリー名を入力"
                 class="text-input"
-                style="display: none; margin-top: 10px;"
+                style="display: none; margin-top: 8px;"
               />
             </div>
           </div>
         </div>
-        
-        <div class="btn-area">
-          <button
-            type="submit"
-            id="slide-generate"
-            class="submit-btn"
-            onclick="handleSubmit(event)"
-          >
-            スライド生成
-          </button>
+      </div>
+      
+      <!-- 右: メインエリア -->
+      <div class="main-area">
+        <div class="container">
+          <form onsubmit="event.preventDefault();">
+            <div class="main-message">
+              <h1>プレゼンテーションのイメージを教えてください</h1>
+            </div>
+            
+            <div class="form-group">
+              <textarea
+                id="prompt"
+                rows="18"
+                placeholder="作成したいプレゼンテーションの内容を入力してください。
+
+  スライドに含めたい内容をできるだけ細かく記述してください。
+  メモ書きをそのまま貼り付けても実行できます。
+  例）生成AIとは
+      1. 生成AIの仕組み
+      2. 生成AIでできる10のこと
+          文章作成
+          アイディア出し
+        ..."
+              ></textarea>
+            </div>
+            
+            <div class="btn-area">
+              <button
+                type="submit"
+                id="slide-generate"
+                class="submit-btn"
+                onclick="handleSubmit(event)"
+              >
+                スライド生成
+              </button>
+            </div>
+          </form>
         </div>
-      </form>
+      </div>
+    </div>
 
       <div id="loading">
         <div class="loading-content">
@@ -458,20 +596,6 @@
   </body>
   <script>
     let isCancelled = false; // キャンセルフラグ
-
-    // オプション欄の開閉制御
-    function toggleOptions() {
-      const optionsContent = document.getElementById("options-content");
-      const toggleIcon = document.getElementById("toggle-icon");
-      
-      if (optionsContent.style.display === "none") {
-        optionsContent.style.display = "block";
-        toggleIcon.textContent = "expand_less";
-      } else {
-        optionsContent.style.display = "none";
-        toggleIcon.textContent = "expand_more";
-      }
-    }
 
     // フォントファミリー選択時の処理
     function handleFontFamilyChange() {
