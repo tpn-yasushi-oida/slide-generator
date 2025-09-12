@@ -1,3 +1,12 @@
+const mockOptions = {
+  primaryColor: '#ff0000',
+  footerText: "© TOPPAN Inc.",
+  headerLogoUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQaWj9IAldlS2r14RkWuKTyOvLs2csIH8rsxA&s",
+  closingLogoUrl: "https://i.ytimg.com/vi/u-N7jG6T7UA/maxresdefault.jpg",
+  fontFamily: "Murecho"
+}
+
+
 const mockUserInput = `
 # 生成AIプレゼン（初心者向け・共感重視・60分）
 

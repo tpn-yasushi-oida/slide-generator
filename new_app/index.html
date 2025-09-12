@@ -184,6 +184,18 @@
       color: #333;
     }
 
+    /* 進捗表示詳細 */
+    #progress-details {
+      margin-top: 15px;
+    }
+
+    #current-step {
+      font-size: 0.9rem;
+      color: #555;
+      margin-top: 5px;
+      font-style: italic;
+    }
+
     /* キャンセルボタン */
     #loading button {
       margin-top: 20px;
@@ -595,7 +607,10 @@
       <div id="loading">
         <div class="loading-content">
           <div class="spinner"></div>
-          <p>作成中...</p>
+          <p id="progress-message">作成中...</p>
+          <div id="progress-details">
+            <p id="current-step">処理を開始しています...</p>
+          </div>
           <button id="cancel-loading" onclick="cancelLoading()">
             キャンセル
           </button>
@@ -643,11 +658,59 @@
     // キャンセルボタンの処理
     function cancelLoading() {
       isCancelled = true; // キャンセルフラグを立てる
+      stopProgressUpdater(); // 進捗更新を停止
+      
       const loadingElement = document.getElementById("loading");
       if (loadingElement) {
         loadingElement.style.display = "none"; // ローディング画面を非表示
       }
       showCustomAlert("処理がキャンセルされました。");
+    }
+
+    // 進捗メッセージのリスト
+    const progressMessages = [
+      "処理を開始しています...",
+      "プロンプトを準備中...",
+      "Gemini APIでスライド構成を作成中...",
+      "データを検証・正規化中...",
+      "プレゼンテーションを生成中...",
+      "最終処理中..."
+    ];
+
+    let progressIndex = 0;
+    let progressTimer = null;
+
+    // 進捗を更新する関数
+    function updateProgress(message) {
+      const progressElement = document.getElementById("current-step");
+      if (progressElement) {
+        progressElement.textContent = message;
+      }
+      console.log(`進捗: ${message}`);
+    }
+
+    // 自動進捗更新を開始
+    function startProgressUpdater() {
+      progressIndex = 0;
+      updateProgress(progressMessages[progressIndex]);
+      
+      progressTimer = setInterval(() => {
+        progressIndex++;
+        if (progressIndex < progressMessages.length) {
+          updateProgress(progressMessages[progressIndex]);
+        } else {
+          clearInterval(progressTimer);
+          progressTimer = null;
+        }
+      }, 3000); // 3秒ごとに進捗を更新
+    }
+
+    // 自動進捗更新を停止
+    function stopProgressUpdater() {
+      if (progressTimer) {
+        clearInterval(progressTimer);
+        progressTimer = null;
+      }
     }
 
     // スライドデータ生成関数
@@ -656,52 +719,50 @@
       const linkButton = document.getElementById("link-to-slide");
 
       isCancelled = false; // 処理開始時にキャンセルフラグをリセット
+      
+      // 自動進捗更新開始
+      startProgressUpdater();
 
       google.script.run
         .withSuccessHandler((response) => {
+          stopProgressUpdater(); // 進捗更新を停止
+          
           if (isCancelled) {
             console.log("キャンセルされたため処理を停止");
             return;
           }
+          
+          updateProgress("スライド生成完了！");
           console.log("成功:", response);
+          
           if (loadingElement) {
             loadingElement.style.display = "none";
           }
           showCustomAlert("スライド生成が完了しました！");
+          
           // リンクを更新
-          if (linkButton) {
-            linkButton.onclick = () => window.open(response.url, "_blank");
+          if (linkButton && response) {
+            linkButton.onclick = () => window.open(response, "_blank");
             linkButton.style.display = "inline-flex";
           }
         })
         .withFailureHandler((error) => {
+          stopProgressUpdater(); // 進捗更新を停止
+          
           if (isCancelled) {
             console.log("キャンセルされたためエラー処理を無視");
             return;
           }
+          
+          updateProgress("エラーが発生しました");
           console.error("エラー:", error);
+          
           if (loadingElement) {
             loadingElement.style.display = "none";
           }
-          showCustomAlert("エラーが発生しました。もう一度お試しください。");
+          showCustomAlert(`エラーが発生しました: ${error.message || error}`);
         })
-        .runGeneration({ 
-          prompt: userInput, 
-          generateOption: undefined,
-          primaryColor: options.primaryColor,
-          footerText: options.footerText,
-          headerLogoUrl: options.headerLogoUrl,
-          closingLogoUrl: options.closingLogoUrl,
-          fontFamily: options.fontFamily
-        });
-
-      google.script.run.outputLog(userInput, undefined, "slide-generate", {
-        primaryColor: options.primaryColor,
-        footerText: options.footerText,
-        headerLogoUrl: options.headerLogoUrl,
-        closingLogoUrl: options.closingLogoUrl,
-        fontFamily: options.fontFamily
-      });
+        .generateSlideData(userInput, options);
     }
 
     async function handleSubmit(event) {
