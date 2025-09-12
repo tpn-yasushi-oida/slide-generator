@@ -1,3 +1,6 @@
+/**
+ * 単体テスト
+ */
 function testCreateSlide() {
     let presentation = initSlide("てすと");
     const slideURL = presentation.getUrl()
@@ -23,7 +26,11 @@ function testJson2Slide() {
 }
 
 function testAllFlow() { 
-  const slideData = testGenerateSlideData()
-  const slideUrl = generatePresentation(slideData) 
+    const prompt = getGeminiPrompt(mockUserInput)
+    const raw = requestGemini(prompt);
+    const cleaned = validateAndNormalizeSlideData(raw);
+    const slideData = cleaned.slideData;
+    const presentation = initSlide("テストスライド")
+    const slideUrl = generatePresentation(presentation, slideData) 
   console.log(slideUrl)
 }
