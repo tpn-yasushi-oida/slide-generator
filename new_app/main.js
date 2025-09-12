@@ -6,7 +6,8 @@ function generateSlideData(userInput, options) {
   try {
     const prompt = getGeminiPrompt(userInput);
     const rawSlideData = requestGemini(prompt);
-    const slideData = validateAndNormalizeSlideData(rawSlideData);
+    const cleanedJson = validateAndNormalizeSlideData(rawSlideData);
+    const slideData = cleanedJson.slideData
     const slideUrl = generatePresentation(slideData, options);
     
     return slideUrl;

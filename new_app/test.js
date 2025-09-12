@@ -10,27 +10,25 @@ function testGenerateJson() {
 }
 
 function testJson2Slide() { 
-  const slideUrl = generatePresentation(mockSlideData) 
+  const slideUrl = generatePresentation(mockSlideData, mockOptions) 
   console.log(slideUrl)
 }
 
 function testJson2SlideWithSetting() { 
-  const options = {
-    primaryColor: '#ff0000',
-    footerText: "© TOPPAN Inc.",
-    headerLogoUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQaWj9IAldlS2r14RkWuKTyOvLs2csIH8rsxA&s",
-    closingLogoUrl: "https://i.ytimg.com/vi/u-N7jG6T7UA/maxresdefault.jpg",
-    fontFamily: "Murecho"
-  }
-  const slideUrl = generatePresentation(mockSlideData, options)
+  const slideUrl = generatePresentation(mockSlideData, mockOptions)
   console.log(slideUrl)
 }
 
-function testAllFlow() { 
-    const prompt = getGeminiPrompt(mockUserInput)
-    const raw = requestGemini(prompt);
-    const cleaned = validateAndNormalizeSlideData(raw);
-    const slideData = cleaned.slideData;
-    const slideUrl = generatePresentation(slideData) 
-  console.log(slideUrl)
+// function testMain() { 
+//   const prompt = getGeminiPrompt(mockUserInput)
+//   const raw = requestGemini(prompt);
+//   const cleaned = validateAndNormalizeSlideData(raw);
+//   const slideData = cleaned.slideData;
+//   const slideUrl = generatePresentation(slideData) 
+//   console.log(slideUrl)
+// }
+
+function testMain() { 
+  generateSlideData(mockUserInput, mockOptions)
 }
+

@@ -3,11 +3,11 @@
 - [【神回】Googleスライドが一瞬で完成する"奇跡"のプロンプト教えます](https://note.com/majin_108/n/n39235bcacbfc)
 - [【必見】"改良版"まじん式プロンプト！](https://note.com/majin_108/n/nd11d1f88a939)
 ## 指定できる要素
-- プライマリーカラー
-- フォント
+- プライマリーカラー #145599
+- フォント 
 - フッターテキスト
-- ヘッダーロゴ
-- クロージングロゴ
+- ヘッダーロゴ https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQaWj9IAldlS2r14RkWuKTyOvLs2csIH8rsxA&s
+- クロージングロゴ https://www.holdings.toppan.com/assets/ja/img/brand/toppan_brand_link_anime.png
 
 
 ## データの流れ
@@ -32,3 +32,11 @@
 
 
 4. スライドURLをフロントエンドのボタンに配置
+
+
+# TODO
+- [ ] 色あらかじめ複数用意
+- [ ] デフォルトカラー,デフォルト画像用意
+- [ ] デフォルト適用ボタン追加
+- [ ] 旧バージョンに戻るボタン
+- [ ] 新バージョンに戻るボタン

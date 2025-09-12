@@ -266,17 +266,14 @@
 
     /* ページレイアウト */
     body {
-      display: grid;
-      grid-template-rows: auto auto auto;
       margin: 0;
       padding: 24px;
     }
 
     header {
-      grid-column: 1 / -1;
       text-align: left;
-      margin-bottom: 0;
-      padding: 24px 0 20px 24px;
+      margin-bottom: 40px;
+      margin-left: 0;
     }
 
     .page-title {
@@ -607,7 +604,7 @@
       <div id="loading">
         <div class="loading-content">
           <div class="spinner"></div>
-          <p id="progress-message">作成中...</p>
+          <p id="progress-message"></p>
           <div id="progress-details">
             <p id="current-step">処理を開始しています...</p>
           </div>
@@ -731,18 +728,14 @@
             console.log("キャンセルされたため処理を停止");
             return;
           }
-          
-          updateProgress("スライド生成完了！");
           console.log("成功:", response);
-          
           if (loadingElement) {
             loadingElement.style.display = "none";
           }
           showCustomAlert("スライド生成が完了しました！");
-          
           // リンクを更新
-          if (linkButton && response) {
-            linkButton.onclick = () => window.open(response, "_blank");
+          if (linkButton) {
+            linkButton.onclick = () => window.open(response.url, "_blank"); // リンクをGoogle Apps Scriptの結果に設定
             linkButton.style.display = "inline-flex";
           }
         })
@@ -791,7 +784,7 @@
       const footerText = document.getElementById("footer-text")?.value || "© TOPPAN Inc.";
       const headerLogoUrl = document.getElementById("header-logo-url")?.value || "";
       const closingLogoUrl = document.getElementById("closing-logo-url")?.value || "";
-      const fontFamilySelect = document.getElementById("font-family")?.value || "Helvetica Neue";
+      const fontFamilySelect = document.getElementById("font-family")?.value || "BIZ UDPGothic";
       const customFontFamily = document.getElementById("custom-font-family")?.value || "";
       
       // フォントファミリーの最終値を決定
