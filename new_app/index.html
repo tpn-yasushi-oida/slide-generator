@@ -234,6 +234,91 @@
     #custom-alert button:hover {
       background-color: #e64a19;
     }
+
+    /* オプション欄のスタイリング */
+    .options-section {
+      margin-bottom: 18px;
+    }
+
+    .options-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px 20px;
+      background: #f8f8f8;
+      border-radius: 15px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      font-size: 0.9rem;
+      color: #555;
+      user-select: none;
+    }
+
+    .options-toggle:hover {
+      background: #f0f0f0;
+    }
+
+    .options-content {
+      margin-top: 15px;
+      padding: 20px;
+      background: #fafafa;
+      border-radius: 15px;
+      border: 1px solid #f0f0f0;
+    }
+
+    .options-content .form-group {
+      margin-bottom: 15px;
+    }
+
+    .options-content .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .options-content label {
+      display: block;
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .text-input,
+    .select-input {
+      width: 100%;
+      padding: 12px 20px;
+      font-size: 0.85rem;
+      outline: none;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      color: #333;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .text-input:focus,
+    .select-input:focus {
+      border-color: #111;
+      box-shadow: 0 0 0 2px rgba(17, 17, 17, 0.1);
+    }
+
+    input[type="color"] {
+      width: 60px;
+      height: 40px;
+      padding: 0;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      background: none;
+    }
+
+    input[type="color"]::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+
+    input[type="color"]::-webkit-color-swatch {
+      border: none;
+      border-radius: 6px;
+    }
   </style>
   <body>
     <header>
@@ -260,6 +345,76 @@
         ..."
           ></textarea>
         </div>
+        
+        <!-- 詳細オプション -->
+        <div class="options-section">
+          <div class="options-toggle" onclick="toggleOptions()">
+            <span>詳細オプション</span>
+            <span id="toggle-icon" class="material-symbols-outlined">expand_more</span>
+          </div>
+          
+          <div id="options-content" class="options-content" style="display: none;">
+            <!-- primaryColor -->
+            <div class="form-group">
+              <label for="primary-color">プライマリーカラー:</label>
+              <input type="color" id="primary-color" value="#111111" />
+            </div>
+            
+            <!-- footerText -->
+            <div class="form-group">
+              <label for="footer-text">フッターテキスト:</label>
+              <input 
+                type="text" 
+                id="footer-text" 
+                placeholder="© TOPPAN Inc." 
+                value="© TOPPAN Inc."
+                class="text-input"
+              />
+            </div>
+            
+            <!-- headerLogoUrl -->
+            <div class="form-group">
+              <label for="header-logo-url">ヘッダーロゴURL:</label>
+              <input 
+                type="url" 
+                id="header-logo-url" 
+                placeholder="https://example.com/logo.png"
+                class="text-input"
+              />
+            </div>
+            
+            <!-- closingLogoUrl -->
+            <div class="form-group">
+              <label for="closing-logo-url">クロージングロゴURL:</label>
+              <input 
+                type="url" 
+                id="closing-logo-url" 
+                placeholder="https://example.com/logo.png"
+                class="text-input"
+              />
+            </div>
+            
+            <!-- fontFamily -->
+            <div class="form-group">
+              <label for="font-family">フォント:</label>
+              <select id="font-family" class="select-input" onchange="handleFontFamilyChange()">
+                <option value="Helvetica Neue">Helvetica Neue（デフォルト）</option>
+                <option value="Reddit Sans">Reddit Sans</option>
+                <option value="Inter">Inter</option>
+                <option value="Noto Sans JP">Noto Sans JP</option>
+                <option value="custom">その他（カスタム入力）</option>
+              </select>
+              <input 
+                type="text" 
+                id="custom-font-family" 
+                placeholder="フォントファミリー名を入力"
+                class="text-input"
+                style="display: none; margin-top: 10px;"
+              />
+            </div>
+          </div>
+        </div>
+        
         <div class="btn-area">
           <button
             type="submit"
@@ -307,6 +462,33 @@
   <script>
     let isCancelled = false; // キャンセルフラグ
 
+    // オプション欄の開閉制御
+    function toggleOptions() {
+      const optionsContent = document.getElementById("options-content");
+      const toggleIcon = document.getElementById("toggle-icon");
+      
+      if (optionsContent.style.display === "none") {
+        optionsContent.style.display = "block";
+        toggleIcon.textContent = "expand_less";
+      } else {
+        optionsContent.style.display = "none";
+        toggleIcon.textContent = "expand_more";
+      }
+    }
+
+    // フォントファミリー選択時の処理
+    function handleFontFamilyChange() {
+      const fontFamilySelect = document.getElementById("font-family");
+      const customFontInput = document.getElementById("custom-font-family");
+      
+      if (fontFamilySelect.value === "custom") {
+        customFontInput.style.display = "block";
+      } else {
+        customFontInput.style.display = "none";
+        customFontInput.value = ""; // カスタム入力をクリア
+      }
+    }
+
     // キャンセルボタンの処理
     function cancelLoading() {
       isCancelled = true; // キャンセルフラグを立てる
@@ -339,6 +521,17 @@
       const prompt = document.getElementById("prompt")?.value || undefined;
       const generateOption =
         document.getElementById("generate-option")?.value || undefined;
+      
+      // オプション値取得
+      const primaryColor = document.getElementById("primary-color")?.value || "#111111";
+      const footerText = document.getElementById("footer-text")?.value || "© TOPPAN Inc.";
+      const headerLogoUrl = document.getElementById("header-logo-url")?.value || "";
+      const closingLogoUrl = document.getElementById("closing-logo-url")?.value || "";
+      const fontFamilySelect = document.getElementById("font-family")?.value || "Helvetica Neue";
+      const customFontFamily = document.getElementById("custom-font-family")?.value || "";
+      
+      // フォントファミリーの最終値を決定
+      const fontFamily = fontFamilySelect === "custom" && customFontFamily ? customFontFamily : fontFamilySelect;
 
       if (!prompt) {
         if (loadingElement) {
@@ -392,9 +585,23 @@
           }
           showCustomAlert("エラーが発生しました。もう一度お試しください。");
         })
-        [apiMethod]({ prompt, generateOption }); // おまかせ生成かカスタム生成かで処理を分岐
+        [apiMethod]({ 
+          prompt, 
+          generateOption,
+          primaryColor,
+          footerText,
+          headerLogoUrl,
+          closingLogoUrl,
+          fontFamily
+        }); // 全オプション値を含めてAPI呼び出し
 
-      google.script.run.outputLog(prompt, generateOption, buttonId);
+      google.script.run.outputLog(prompt, generateOption, buttonId, {
+        primaryColor,
+        footerText,
+        headerLogoUrl,
+        closingLogoUrl,
+        fontFamily
+      });
     }
 
     // カスタムアラートを表示する
