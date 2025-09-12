@@ -396,22 +396,22 @@
     }
 
     input[type="color"] {
-      width: 80px;
-      height: 32px;
+      width: 0;
+      height: 0;
+      opacity: 0;
+      position: absolute;
+      pointer-events: none;
+      border: none;
       padding: 0;
-      border: 1px solid #e0e0e0;
-      border-radius: 6px;
-      cursor: pointer;
-      background: none;
+      margin: 0;
     }
 
     input[type="color"]::-webkit-color-swatch-wrapper {
-      padding: 0;
+      display: none;
     }
 
     input[type="color"]::-webkit-color-swatch {
-      border: none;
-      border-radius: 6px;
+      display: none;
     }
 
     /* カラーボタンのスタイル */
@@ -1002,6 +1002,20 @@
       console.log(`色が変更されました: ${colorCode}`);
     }
 
+    // 色の明度を判定するヘルパー関数
+    function isColorDark(hexColor) {
+      // HEXからRGBに変換
+      const r = parseInt(hexColor.substr(1, 2), 16);
+      const g = parseInt(hexColor.substr(3, 2), 16);
+      const b = parseInt(hexColor.substr(5, 2), 16);
+      
+      // 相対輝度を計算 (ITU-R BT.709)
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      
+      // 0.5未満なら暗い色とみなす
+      return luminance < 0.5;
+    }
+
     function showCustomColorPicker() {
       const colorInput = document.getElementById("primary-color");
       const customColorBtn = document.querySelector(".custom-color-btn");
@@ -1010,11 +1024,11 @@
         // カスタムボタンの位置を取得
         const btnRect = customColorBtn.getBoundingClientRect();
         
-        // カラーピッカーを表示してボタンの近くに配置
+        // カラーピッカーを表示して画面外に配置（非表示）
         colorInput.style.display = "block";
         colorInput.style.position = "absolute";
-        colorInput.style.left = `${btnRect.left + window.scrollX}px`;
-        colorInput.style.top = `${btnRect.bottom + window.scrollY + 5}px`;
+        colorInput.style.left = "-9999px";
+        colorInput.style.top = "-9999px";
         colorInput.style.zIndex = "1000";
         colorInput.click();
         
@@ -1025,6 +1039,19 @@
           // すべてのカラーボタンからactiveクラスを除去
           const allColorBtns = document.querySelectorAll(".color-btn");
           allColorBtns.forEach(btn => btn.classList.remove("active"));
+          
+          // カスタムボタンの背景色を選択した色に変更
+          customColorBtn.style.backgroundColor = selectedColor;
+          
+          // アイコンの色を選択した色の明度に応じて調整
+          const iconSpan = customColorBtn.querySelector("span");
+          if (iconSpan) {
+            if (isColorDark(selectedColor)) {
+              iconSpan.style.color = "#ffffff";
+            } else {
+              iconSpan.style.color = "#333333";
+            }
+          }
           
           console.log(`カスタム色が選択されました: ${selectedColor}`);
           
