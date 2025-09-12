@@ -516,12 +516,13 @@
             <!-- primaryColor -->
             <div class="form-group">
               <label for="primary-color">メインカラー:</label>
-              <input type="color" id="primary-color" value="#111111" />
+              <input type="color" id="primary-color" value="#145599" />
             </div>
             <!-- fontFamily -->
             <div class="form-group">
               <label for="font-family">フォント:</label>
               <select id="font-family" class="select-input" onchange="handleFontFamilyChange()">
+                <option value="Arial">Arial</option>
                 <option value="BIZ UDPGothic">BIZ UDPGothic</option>
                 <option value="Noto Sans JP">Noto Sans JP</option>
                 <option value="IBM Plex Sans JP">IBM Plex Sans JP</option>
@@ -529,7 +530,6 @@
                 <option value="Noto Serif JP">Noto Serif JP</option>
                 <option value="Zen Kaku Gothic Antique">Zen Kaku Gothic Antique</option>
                 <option value="M PLUS 1p">M PLUS 1p</option>
-                <option value="Arial">Arial</option>
                 <option value="Shippori Mincho">Shippori Mincho</option>
                 <option value="Murecho">Murecho</option>
                 <option value="Zen Maru Gothic">Zen Maru Gothic</option>
@@ -564,7 +564,9 @@
             
             <!-- headerLogoUrl -->
             <div class="form-group">
-              <label for="header-logo-url">ヘッダーロゴURL:</label>
+              <label for="header-logo-url">ヘッダーロゴURL: 
+                <button type="button" onclick="setToppanLogoUrl('header-logo-url')" style="background:none;border:none;color:#145599;text-decoration:underline;cursor:pointer;font-size:0.7rem;margin-left:5px;">TOPPANロゴを使用</button>
+              </label>
               <input 
                 type="url" 
                 id="header-logo-url" 
@@ -575,7 +577,9 @@
             
             <!-- closingLogoUrl -->
             <div class="form-group">
-              <label for="closing-logo-url">最終スライドロゴURL:</label>
+              <label for="closing-logo-url">最終スライドロゴURL: 
+                <button type="button" onclick="setToppanLogoUrl('closing-logo-url')" style="background:none;border:none;color:#145599;text-decoration:underline;cursor:pointer;font-size:0.7rem;margin-left:5px;">TOPPANロゴを使用</button>
+              </label>
               <input 
                 type="url" 
                 id="closing-logo-url" 
@@ -649,6 +653,15 @@
       } else {
         customFontInput.style.display = "none";
         customFontInput.value = ""; // カスタム入力をクリア
+      }
+    }
+
+    // TOPPANロゴURLを設定する関数
+    function setToppanLogoUrl(inputId) {
+      const toppanLogoUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQaWj9IAldlS2r14RkWuKTyOvLs2csIH8rsxA&s";
+      const inputElement = document.getElementById(inputId);
+      if (inputElement) {
+        inputElement.value = toppanLogoUrl;
       }
     }
 
@@ -780,10 +793,14 @@
       const userInput = document.getElementById("prompt")?.value || undefined;
       
       // オプション値取得
-      const primaryColor = document.getElementById("primary-color")?.value || "#111111";
+      const primaryColor = document.getElementById("primary-color")?.value || "#145599";
       const footerText = document.getElementById("footer-text")?.value || "© TOPPAN Inc.";
-      const headerLogoUrl = document.getElementById("header-logo-url")?.value || "";
-      const closingLogoUrl = document.getElementById("closing-logo-url")?.value || "";
+      const headerLogoUrlValue = document.getElementById("header-logo-url")?.value?.trim();
+      const closingLogoUrlValue = document.getElementById("closing-logo-url")?.value?.trim();
+      
+      // 空欄の場合はnullを設定（画像を配置しない）
+      const headerLogoUrl = headerLogoUrlValue || null;
+      const closingLogoUrl = closingLogoUrlValue || null;
       const fontFamilySelect = document.getElementById("font-family")?.value || "BIZ UDPGothic";
       const customFontFamily = document.getElementById("custom-font-family")?.value || "";
       

@@ -207,8 +207,22 @@ function generatePresentation(slideData, options) {
   if (options.primaryColor) CONFIG.COLORS.primary_color = options.primaryColor;
   if (options.fontFamily) CONFIG.FONTS.family = options.fontFamily;
   if (options.footerText) CONFIG.FOOTER_TEXT = options.footerText;
-  if (options.headerLogoUrl) CONFIG.LOGOS.header = options.headerLogoUrl;
-  if (options.closingLogoUrl) CONFIG.LOGOS.closing = options.closingLogoUrl;
+  
+  // ヘッダーロゴの設定（nullの場合は画像を配置しない）
+  if (options.headerLogoUrl) {
+    CONFIG.LOGOS.header = options.headerLogoUrl;
+  } else if (options.headerLogoUrl === null) {
+    CONFIG.LOGOS.header = null;
+  }
+  
+  // クロージングロゴの設定（nullの場合は画像を配置しない、closingスライドも除外）
+  if (options.closingLogoUrl) {
+    CONFIG.LOGOS.closing = options.closingLogoUrl;
+  } else if (options.closingLogoUrl === null) {
+    CONFIG.LOGOS.closing = null;
+    // closingスライドをslideDataから除外
+    slideData = slideData.filter(slide => slide.type !== 'closing');
+  }
 
   // [変更点]: スライドを生成するようにinitSlide/initSlide()を作成。
   const title = slideData?.[0]?.title || "[AIスライド生成]プレゼンテーション";
@@ -448,12 +462,15 @@ function createTitleSlide(slide, data, layout) {
   slide.getBackground().setSolidFill(CONFIG.COLORS.background_white);
 
   const logoRect = layout.getRect('titleSlide.logo');
-  try {
-    const logo = slide.insertImage(CONFIG.LOGOS.header);
-    const aspect = logo.getHeight() / logo.getWidth();
-    logo.setLeft(logoRect.left).setTop(logoRect.top).setWidth(logoRect.width).setHeight(logoRect.width * aspect);
-  } catch (e) {
-    // 画像挿入に失敗した場合はスキップして他の要素を描画
+  // ヘッダーロゴがnullでない場合のみ画像を配置
+  if (CONFIG.LOGOS.header) {
+    try {
+      const logo = slide.insertImage(CONFIG.LOGOS.header);
+      const aspect = logo.getHeight() / logo.getWidth();
+      logo.setLeft(logoRect.left).setTop(logoRect.top).setWidth(logoRect.width).setHeight(logoRect.width * aspect);
+    } catch (e) {
+      // 画像挿入に失敗した場合はスキップして他の要素を描画
+    }
   }
 
   const titleRect = layout.getRect('titleSlide.title');
@@ -1021,14 +1038,17 @@ function createKpiSlide(slide, data, layout, pageNum) {
 // closing（結び）
 function createClosingSlide(slide, data, layout) {
 slide.getBackground().setSolidFill(CONFIG.COLORS.background_white);
-try {
-  const image = slide.insertImage(CONFIG.LOGOS.closing);
-  const imgW_pt = layout.pxToPt(450) * layout.scaleX;
-  const aspect = image.getHeight() / image.getWidth();
-  image.setWidth(imgW_pt).setHeight(imgW_pt * aspect);
-  image.setLeft((layout.pageW_pt - imgW_pt) / 2).setTop((layout.pageH_pt - (imgW_pt * aspect)) / 2);
-} catch (e) {
-  // 画像挿入に失敗した場合はスキップして他の要素を描画
+// クロージングロゴがnullでない場合のみ画像を配置
+if (CONFIG.LOGOS.closing) {
+  try {
+    const image = slide.insertImage(CONFIG.LOGOS.closing);
+    const imgW_pt = layout.pxToPt(450) * layout.scaleX;
+    const aspect = image.getHeight() / image.getWidth();
+    image.setWidth(imgW_pt).setHeight(imgW_pt * aspect);
+    image.setLeft((layout.pageW_pt - imgW_pt) / 2).setTop((layout.pageH_pt - (imgW_pt * aspect)) / 2);
+  } catch (e) {
+    // 画像挿入に失敗した場合はスキップして他の要素を描画
+  }
 }
 }
 
@@ -1790,12 +1810,15 @@ return { left: rect.left + (dx || 0), top: rect.top + (dy || 0), width: rect.wid
 
 function drawStandardTitleHeader(slide, layout, key, title) {
 const logoRect = layout.getRect(`${key}.headerLogo`);
-try {
-  const logo = slide.insertImage(CONFIG.LOGOS.header);
-  const asp = logo.getHeight() / logo.getWidth();
-  logo.setLeft(logoRect.left).setTop(logoRect.top).setWidth(logoRect.width).setHeight(logoRect.width * asp);
-} catch (e) {
-  // 画像挿入に失敗した場合はスキップして他の要素を描画
+// ヘッダーロゴがnullでない場合のみ画像を配置
+if (CONFIG.LOGOS.header) {
+  try {
+    const logo = slide.insertImage(CONFIG.LOGOS.header);
+    const asp = logo.getHeight() / logo.getWidth();
+    logo.setLeft(logoRect.left).setTop(logoRect.top).setWidth(logoRect.width).setHeight(logoRect.width * asp);
+  } catch (e) {
+    // 画像挿入に失敗した場合はスキップして他の要素を描画
+  }
 }
 
 const titleRect = layout.getRect(`${key}.title`);
