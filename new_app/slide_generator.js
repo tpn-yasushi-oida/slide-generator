@@ -202,7 +202,7 @@ let __SECTION_COUNTER = 0; // 章番号カウンタ（ゴースト数字用）
  * 最大スライド数: 50枚
  */
 
-function generatePresentation(presentation, slideData, primaryColor, footerText, headerLogoUrl, closingLogoUrl, fontFamily) {
+function generatePresentation(slideData, primaryColor, footerText, headerLogoUrl, closingLogoUrl, fontFamily) {
   // [変更点]: 引数に設定し、引数で上書きする仕様に
   if (primaryColor) CONFIG.COLORS.primary_color = primaryColor;
   if (footerText) CONFIG.FOOTER_TEXT = footerText;
@@ -210,8 +210,9 @@ function generatePresentation(presentation, slideData, primaryColor, footerText,
   if (closingLogoUrl) CONFIG.LOGOS.closing = closingLogoUrl;
   if (fontFamily) CONFIG.FONTS.family = fontFamily;
 
-  // [変更点]: スライドを生成するようにutils/initSlide()を作成。
-  // let presentation;
+  // [変更点]: スライドを生成するようにinitSlide/initSlide()を作成。
+  const title = slideData?.[0]?.title || "[AIスライド生成]プレゼンテーション";
+  const presentation = initSlide(title)
   try {
   //   presentation = SETTINGS.TARGET_PRESENTATION_ID
   //     ? SlidesApp.openById(SETTINGS.TARGET_PRESENTATION_ID)

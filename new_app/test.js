@@ -20,19 +20,17 @@ function testGenerateJson() {
 }
 
 function testJson2Slide() { 
-  const presentation = initSlide("テストスライド")
-  const slideUrl = generatePresentation(presentation, mockSlideData) 
+  const slideUrl = generatePresentation(mockSlideData) 
   console.log(slideUrl)
 }
 
 function testJson2SlideWithSetting() { 
-  const presentation = initSlide("テストスライド")
   const primaryColor = '#ff0000'
   const footerText = "© TOPPAN Inc."
   const headerLogoUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQaWj9IAldlS2r14RkWuKTyOvLs2csIH8rsxA&s"
   const closingLogoUrl = "https://i.ytimg.com/vi/u-N7jG6T7UA/maxresdefault.jpg"
   const fontFamily = "Murecho"
-  const slideUrl = generatePresentation(presentation, mockSlideData, primaryColor, footerText, headerLogoUrl, closingLogoUrl, fontFamily)
+  const slideUrl = generatePresentation(mockSlideData, primaryColor, footerText, headerLogoUrl, closingLogoUrl, fontFamily)
   console.log(slideUrl)
 }
 
@@ -41,7 +39,6 @@ function testAllFlow() {
     const raw = requestGemini(prompt);
     const cleaned = validateAndNormalizeSlideData(raw);
     const slideData = cleaned.slideData;
-    const presentation = initSlide("テストスライド")
-    const slideUrl = generatePresentation(presentation, slideData) 
+    const slideUrl = generatePresentation(slideData) 
   console.log(slideUrl)
 }
