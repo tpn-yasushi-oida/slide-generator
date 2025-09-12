@@ -9,10 +9,11 @@
 
 
 // --- 1. 実行設定 ---
-const SETTINGS = {
-SHOULD_CLEAR_ALL_SLIDES: true,
-TARGET_PRESENTATION_ID: "TARGET_PRESENTATION_ID: 1SZKhjWDivWMJW4ycwN2yB34l1skSqcynkleyWbbgyic"
-};
+// [変更]: 削除
+// const SETTINGS = {
+// SHOULD_CLEAR_ALL_SLIDES: true,
+// TARGET_PRESENTATION_ID: "TARGET_PRESENTATION_ID: 1SZKhjWDivWMJW4ycwN2yB34l1skSqcynkleyWbbgyic"
+// };
 
 // --- 2. マスターデザイン設定 (Pixel Perfect Ver.) ---
 const CONFIG = {
@@ -201,26 +202,24 @@ let __SECTION_COUNTER = 0; // 章番号カウンタ（ゴースト数字用）
  * 最大スライド数: 50枚
  */
 
-function generatePresentation(presentation, slideData) {
-  const userSettings = PropertiesService.getScriptProperties().getProperties();
-  if (userSettings.primaryColor) CONFIG.COLORS.primary_color = userSettings.primaryColor;
-  if (userSettings.footerText) CONFIG.FOOTER_TEXT = userSettings.footerText;
-  if (userSettings.headerLogoUrl) CONFIG.LOGOS.header = userSettings.headerLogoUrl;
-  if (userSettings.closingLogoUrl) CONFIG.LOGOS.closing = userSettings.closingLogoUrl;
-  if (userSettings.fontFamily) CONFIG.FONTS.family = userSettings.fontFamily;
+function generatePresentation(presentation, slideData, primaryColor, footerText, headerLogoUrl, closingLogoUrl, fontFamily) {
+  // [変更点]: 引数に設定し、引数で上書きする仕様に
+  if (primaryColor) CONFIG.COLORS.primary_color = primaryColor;
+  if (footerText) CONFIG.FOOTER_TEXT = footerText;
+  if (headerLogoUrl) CONFIG.LOGOS.header = headerLogoUrl;
+  if (closingLogoUrl) CONFIG.LOGOS.closing = closingLogoUrl;
+  if (fontFamily) CONFIG.FONTS.family = fontFamily;
 
   // [変更点]: スライドを生成するようにutils/initSlide()を作成。
-  let presentation;
+  // let presentation;
   try {
   //   presentation = SETTINGS.TARGET_PRESENTATION_ID
   //     ? SlidesApp.openById(SETTINGS.TARGET_PRESENTATION_ID)
   //     : SlidesApp.getActivePresentation();
   //   if (!presentation) throw new Error('対象のプレゼンテーションが見つかりません。');
 
-    if (SETTINGS.SHOULD_CLEAR_ALL_SLIDES) {
-      const slides = presentation.getSlides();
-      for (let i = slides.length - 1; i >= 0; i--) slides[i].remove();
-    }
+    const slides = presentation.getSlides();
+    for (let i = slides.length - 1; i >= 0; i--) slides[i].remove();
 
     __SECTION_COUNTER = 0;
 
