@@ -87,7 +87,7 @@
 
     .form-group textarea {
       width: 100%;
-      height: 400px;
+      height: 480px;
       resize: vertical;
       flex: 1;
     }
@@ -149,7 +149,7 @@
       background-color: #ffdd00;
       color: #111;
       font-weight: bold;
-      margin-top: 40px;
+      margin-top: 20px;
       display: none;
     }
 
@@ -303,7 +303,7 @@
     }
 
     .page-title h1 {
-      font-size: 1.5rem;
+      font-size: 1.6rem;
       font-weight: 600;
       color: #333;
       margin: 0;
@@ -336,6 +336,7 @@
       flex: 1;
       display: flex;
       flex-direction: column;
+      min-height: 480px;
     }
 
     .options-title {
@@ -366,14 +367,19 @@
       display: block;
       font-size: 0.75rem;
       color: #666;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
       font-weight: 500;
+    }
+
+    /* ボタン付きラベルの間隔を調整 */
+    .options-list label:has(button) {
+      margin-bottom: 12px;
     }
 
     .text-input,
     .select-input {
       width: 100%;
-      padding: 8px 12px;
+      padding: 12px 12px;
       font-size: 0.75rem;
       outline: none;
       background: #fff;
@@ -390,7 +396,7 @@
     }
 
     input[type="color"] {
-      width: 60px;
+      width: 80px;
       height: 32px;
       padding: 0;
       border: 1px solid #e0e0e0;
@@ -433,7 +439,7 @@
       }
 
       .form-group textarea {
-        height: 280px;
+        height: 320px;
       }
 
       .options-section {
@@ -460,7 +466,7 @@
       }
 
       .form-group textarea {
-        height: 250px;
+        height: 280px;
         padding: 12px 15px;
         font-size: 0.85rem;
       }
@@ -471,13 +477,18 @@
 
       .text-input,
       .select-input {
-        padding: 6px 10px;
+        padding: 10px 10px;
         font-size: 0.7rem;
       }
 
       .options-list label {
         font-size: 0.7rem;
-        margin-bottom: 4px;
+        margin-bottom: 6px;
+      }
+
+      /* モバイル版でもボタン付きラベルの間隔を調整 */
+      .options-list label:has(button) {
+        margin-bottom: 8px;
       }
 
       .options-list {
@@ -495,7 +506,7 @@
   </style>
   <body>
     <header>
-      <h1>SlideGenerator2</h1>
+      <h1>SlideGenerator</h1>
       <button id="old-app-btn" class="old-app-button" onclick="openOldApp()" title="アップデート前のアプリを利用されたい方はこちら">旧アプリを使用</button>
     </header>
     
@@ -536,12 +547,12 @@
           <div class="options-list">
             <!-- primaryColor -->
             <div class="form-group">
-              <label for="primary-color">メインカラー:</label>
+              <label for="primary-color">メインカラー</label>
               <input type="color" id="primary-color" value="#145599" />
             </div>
             <!-- fontFamily -->
             <div class="form-group">
-              <label for="font-family">フォント:</label>
+              <label for="font-family">フォント</label>
               <select id="font-family" class="select-input" onchange="handleFontFamilyChange()">
                 <option value="Arial">Arial</option>
                 <option value="BIZ UDPGothic">BIZ UDPGothic</option>
@@ -573,7 +584,7 @@
             
             <!-- footerText -->
             <div class="form-group">
-              <label for="footer-text">フッターテキスト:</label>
+              <label for="footer-text">フッターテキスト</label>
               <input 
                 type="text" 
                 id="footer-text" 
@@ -585,7 +596,7 @@
             
             <!-- headerLogoUrl -->
             <div class="form-group">
-              <label for="header-logo-url">ヘッダーロゴURL: 
+              <label for="header-logo-url">ヘッダーロゴURL 
                 <button type="button" onclick="setToppanLogoUrl('header-logo-url')" style="background:#145599;border:none;color:white;cursor:pointer;font-size:0.7rem;padding:4px 8px;border-radius:4px;float:right;margin-left:10px;">TOPPANロゴを使用</button>
               </label>
               <input 
@@ -598,7 +609,7 @@
             
             <!-- closingLogoUrl -->
             <div class="form-group">
-              <label for="closing-logo-url">最終スライドロゴURL: 
+              <label for="closing-logo-url">最終スライドロゴURL
                 <button type="button" onclick="setToppanLogoUrl('closing-logo-url')" style="background:#145599;border:none;color:white;cursor:pointer;font-size:0.7rem;padding:4px 8px;border-radius:4px;float:right;margin-left:10px;">TOPPANロゴを使用</button>
               </label>
               <input 
