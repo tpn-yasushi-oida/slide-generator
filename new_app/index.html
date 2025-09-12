@@ -25,7 +25,6 @@
     body {
       font-family: "Helvetica Neue", Arial, sans-serif;
       color: #333;
-      padding: 24px;
     }
 
     header {
@@ -256,10 +255,9 @@
     /* ページレイアウト */
     body {
       display: grid;
-      grid-template-rows: auto 1fr;
-      min-height: 100vh;
+      grid-template-rows: auto auto auto;
       margin: 0;
-      padding: 0;
+      padding: 24px;
     }
 
     header {
@@ -269,11 +267,23 @@
       padding: 24px 0 20px 24px;
     }
 
+    .page-title {
+      text-align: center;
+      margin: 20px 0 30px 0;
+      padding: 0 24px;
+    }
+
+    .page-title h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #333;
+      margin: 0;
+    }
+
     .page-layout {
       display: grid;
-      grid-template-columns: 4fr 1fr;
+      grid-template-columns: 3fr 2fr;
       gap: 20px;
-      min-height: 100%;
     }
 
     .sidebar {
@@ -286,7 +296,6 @@
     .main-area {
       display: flex;
       flex-direction: column;
-      min-height: 100%;
     }
 
     /* サイドバーオプションのスタイリング */
@@ -316,6 +325,7 @@
       flex-direction: column;
       gap: 12px;
       flex: 1;
+      justify-content: flex-start;
     }
 
     .options-list .form-group {
@@ -459,46 +469,83 @@
       <h1>SlideGenerator2</h1>
     </header>
     
+    <!-- ページタイトル -->
+    <div class="page-title">
+      <h1>プレゼンテーションのイメージを教えてください</h1>
+    </div>
+    
     <div class="page-layout">
       <!-- 左: メインエリア -->
       <div class="main-area">
         <div class="container">
           <form onsubmit="event.preventDefault();">
-            <div class="main-message">
-              <h1>プレゼンテーションのイメージを教えてください</h1>
-            </div>
             
             <div class="form-group">
               <textarea
-                id="prompt"
-                rows="18"
-                placeholder="作成したいプレゼンテーションの内容を入力してください。
-
-  スライドに含めたい内容をできるだけ細かく記述してください。
-  メモ書きをそのまま貼り付けても実行できます。
+              id="prompt"
+              rows="15"
+              placeholder="作成したいプレゼンテーションの内容を入力してください。
+              
+              スライドに含めたい内容をできるだけ細かく記述してください。
+              メモ書きをそのまま貼り付けても実行できます。
   例）生成AIとは
-      1. 生成AIの仕組み
-      2. 生成AIでできる10のこと
-          文章作成
-          アイディア出し
-        ..."
-              ></textarea>
-            </div>
-          </form>
-        </div>
-      </div>
-      
-      <!-- 右: サイドバー -->
-      <div class="sidebar">
+  1. 生成AIの仕組み
+  2. 生成AIでできる10のこと
+  文章作成
+  アイディア出し
+  ..."
+  ></textarea>
+</div>
+</form>
+</div>
+</div>
+
+<!-- 右: サイドバー -->
+<div class="sidebar">
         <div class="options-section">
           <h3 class="options-title">詳細オプション</h3>
           
           <div class="options-list">
             <!-- primaryColor -->
             <div class="form-group">
-              <label for="primary-color">プライマリーカラー:</label>
+              <label for="primary-color">メインカラー:</label>
               <input type="color" id="primary-color" value="#111111" />
             </div>
+            <!-- fontFamily -->
+            <div class="form-group">
+              <label for="font-family">フォント:</label>
+              <select id="font-family" class="select-input" onchange="handleFontFamilyChange()">
+                <option value="Helvetica Neue">Helvetica Neue（デフォルト）</option>
+                <option value="Reddit Sans">Reddit Sans</option>
+                <option value="Inter">Inter</option>
+                <optgroup label="日本語フォント（ビジネス → フランク）">
+                  <option value="BIZ UDPGothic">BIZ UDPGothic</option>
+                  <option value="Noto Sans JP">Noto Sans JP</option>
+                  <option value="IBM Plex Sans JP">IBM Plex Sans JP</option>
+                  <option value="Zen Kaku Gothic New">Zen Kaku Gothic New</option>
+                  <option value="Noto Serif JP">Noto Serif JP</option>
+                  <option value="Zen Kaku Gothic Antique">Zen Kaku Gothic Antique</option>
+                  <option value="M PLUS 1p">M PLUS 1p</option>
+                  <option value="Shippori Mincho">Shippori Mincho</option>
+                  <option value="Murecho">Murecho</option>
+                  <option value="Zen Maru Gothic">Zen Maru Gothic</option>
+                  <option value="M PLUS Rounded 1c">M PLUS Rounded 1c</option>
+                  <option value="Kaisei Opti">Kaisei Opti</option>
+                  <option value="Hina Mincho">Hina Mincho</option>
+                  <option value="Kaisei Decol">Kaisei Decol</option>
+                  <option value="Dela Gothic One">Dela Gothic One</option>
+                </optgroup>
+                <option value="custom">その他（カスタム入力）</option>
+              </select>
+              <input
+                type="text"
+                id="custom-font-family"
+                placeholder="フォントファミリー名を入力"
+                class="text-input"
+                style="display: none; margin-top: 8px;"
+              />
+            </div>
+
             
             <!-- footerText -->
             <div class="form-group">
@@ -525,7 +572,7 @@
             
             <!-- closingLogoUrl -->
             <div class="form-group">
-              <label for="closing-logo-url">クロージングロゴURL:</label>
+              <label for="closing-logo-url">最終スライドロゴURL:</label>
               <input 
                 type="url" 
                 id="closing-logo-url" 
@@ -534,24 +581,6 @@
               />
             </div>
             
-            <!-- fontFamily -->
-            <div class="form-group">
-              <label for="font-family">フォント:</label>
-              <select id="font-family" class="select-input" onchange="handleFontFamilyChange()">
-                <option value="Helvetica Neue">Helvetica Neue（デフォルト）</option>
-                <option value="Reddit Sans">Reddit Sans</option>
-                <option value="Inter">Inter</option>
-                <option value="Noto Sans JP">Noto Sans JP</option>
-                <option value="custom">その他（カスタム入力）</option>
-              </select>
-              <input 
-                type="text" 
-                id="custom-font-family" 
-                placeholder="フォントファミリー名を入力"
-                class="text-input"
-                style="display: none; margin-top: 8px;"
-              />
-            </div>
           </div>
         </div>
       </div>
