@@ -17,7 +17,7 @@ function testGenerateJson() {
 
 function testJson2Slide() { 
   const presentation = initSlide("テストスライド")
-  const slideUrl = generatePresentation(mockSlideData, presentation) 
+  const slideUrl = generatePresentation(presentation, mockSlideData) 
   console.log(slideUrl)
 }
 
