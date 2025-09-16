@@ -1,7 +1,7 @@
 function doGet() {
   const t = HtmlService.createTemplateFromFile("index");
   const html = t.evaluate();
-  html.setTitle("SlideGenerator3");
+  html.setTitle("SlideGenerator");
   return html;
 }
 
