@@ -25,7 +25,7 @@ function sanitizeCell(value) {
 }
 
 function canonicalKey(value) {
-  return sanitizeCell(value).toLowerCase().replace(/[\s_]/g, "");
+  return sanitizeCell(value).toLowerCase().replace(/\s|_/g, "");
 }
 
 function pickTableValue(row, header, index) {
@@ -48,10 +48,24 @@ function splitTableRowString(rowString, expectedLength) {
     .map((p) => p.trim())
     .filter((p) => p.length > 0);
   const parts = new Array(expectedLength).fill("");
+
   for (let i = 0; i < expectedLength; i++) {
     parts[i] = raw[i] ? sanitizeText(raw[i]) : "";
   }
   return parts;
+}
+
+function formatDateAsJstToday() {
+  const now = new Date();
+  if (typeof Utilities !== "undefined" && Utilities.formatDate) {
+    return Utilities.formatDate(now, "Asia/Tokyo", "yyyy.MM.dd");
+  }
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  const jst = new Date(utc + 9 * 60 * 60000);
+  const year = jst.getUTCFullYear();
+  const month = String(jst.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(jst.getUTCDate()).padStart(2, "0");
+  return `${year}.${month}.${day}`;
 }
 
 /** slideData検証と正規化 */
@@ -80,21 +94,8 @@ function validateAndNormalizeSlideData(result) {
     switch (type) {
       case "title": {
         if (typeof slide.title !== "string") throw new Error("title.title が不正");
-        if (typeof slide.date !== "string") throw new Error("title.date が不正");
-        const rawDate = sanitizeCell(slide.date);
-        const dotDate = /^\d{4}\.\d{2}\.\d{2}$/;
-        const jpMatch = rawDate.match(/^(\d{4})年(\d{1,2})月(\d{1,2})日$/);
-        if (!dotDate.test(rawDate) && !jpMatch) {
-          throw new Error("title.date の形式が不正 (YYYY.MM.DD または YYYY年M月D日)");
-        }
-        if (jpMatch) {
-          const [, y, m, d] = jpMatch;
-          slide.date = `${y}年${String(m).padStart(2, "0")}月${String(d).padStart(2, "0")}日`;
-        } else {
-          slide.date = rawDate;
-        }
         slide.title = sanitizeText(slide.title);
-        slide.date = sanitizeCell(slide.date);
+        slide.date = formatDateAsJstToday();
         if (slide.notes) slide.notes = sanitizeText(slide.notes);
         break;
       }

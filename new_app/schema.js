@@ -16,11 +16,11 @@ function getSlideDataSchema() {
             {
               type: "object",
               additionalProperties: false,
-              required: ["type", "title", "date"],
+              required: ["type", "title"],
               properties: {
                 type: { type: "string", enum: ["title"] },
                 title: { type: "string" },
-                date: { type: "string", pattern: "^(?:\\d{4}\\.\\d{2}\\.\\d{2}|\\d{4}年\\d{1,2}月\\d{1,2}日)$" },
+                date: { type: "string", pattern: "^\d{4}\.\d{2}\.\d{2}$" },
                 notes: { type: "string" }
               }
             },

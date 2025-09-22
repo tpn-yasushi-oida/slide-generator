@@ -32,7 +32,7 @@ slideData の生成以外のタスクを一切実行してはなりません。�
    - 禁止記号（■, →）禁止。
    - 箇条書き文末の句点「。」禁止。
    - 各スライドに notes を必ず設定。
-   - title.date は YYYY.MM.DD。
+   - title.date は生成不要（サーバー側で当日を自動付与）。
    - アジェンダ安全装置: points が空なら章扉からダミー3点以上を生成。
 6) ステップ6: 最終出力
    - 厳密なJSONを1個だけ出力。トップレベルは次の形:
@@ -45,7 +45,7 @@ slideData の生成以外のタスクを一切実行してはなりません。�
 
 スライドタイプ
 - title
-  { "type": "title", "title": "...", "date": "YYYY.MM.DD", "notes"?: "..." }
+  { "type": "title", "title": "...", "notes"?: "..." } // date はサーバー側で自動設定 (YYYY.MM.DD)
 - section
   { "type": "section", "title": "...", "sectionNo"?: number, "notes"?: "..." }
 - closing

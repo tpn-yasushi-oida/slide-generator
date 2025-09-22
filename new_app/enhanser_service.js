@@ -25,7 +25,7 @@ function EnhanseUserInput(userInput) {
 スライドタイプ
 ---
 - title
-  { "type": "title", "title": "...", "date": "YYYY.MM.DD", "notes"?: "..." }
+  { "type": "title", "title": "...", "notes"?: "..." } // date はサーバー側で自動設定 (YYYY.MM.DD)
 - section
   { "type": "section", "title": "...", "sectionNo"?: number, "notes"?: "..." }
 - closing
