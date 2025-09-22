@@ -356,13 +356,20 @@ function validateAndNormalizeSlideData(result) {
         if (!Array.isArray(slide.items)) throw new Error("bulletCards.items は配列である必要があります");
         if (slide.items.length > 3) slide.items = slide.items.slice(0, 3);
         slide.items = slide.items.map((it, ii) => {
-          if (!it || typeof it !== "object") throw new Error(`bulletCards.items[${ii}] が不正`);
-          if (typeof it.title !== "string" || typeof it.desc !== "string") {
-            throw new Error(`bulletCards.items[${ii}] の title/desc が不正`);
+          if (typeof it === "string") {
+            const text = stripJapanesePeriodEnd(sanitizeText(it));
+            if (!text) throw new Error(`bulletCards.items[${ii}] が不正`);
+            return { title: text, desc: "" };
           }
+          if (!it || typeof it !== "object") throw new Error(`bulletCards.items[${ii}] が不正`);
+          const titleValue = it.title ?? it.heading ?? it.label;
+          const descValue = it.desc ?? it.description ?? it.detail ?? "";
+          if (typeof titleValue !== "string") throw new Error(`bulletCards.items[${ii}].title が不正`);
+          const normalizedTitle = sanitizeText(titleValue);
+          const normalizedDesc = stripJapanesePeriodEnd(sanitizeText(descValue));
           return {
-            title: sanitizeText(it.title),
-            desc: stripJapanesePeriodEnd(sanitizeText(it.desc))
+            title: normalizedTitle,
+            desc: normalizedDesc
           };
         });
         if (slide.notes) slide.notes = sanitizeText(slide.notes);

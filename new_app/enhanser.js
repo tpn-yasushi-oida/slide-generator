@@ -17,7 +17,8 @@ function getEnhansePrompt(userInput) {
 5. どのスライドを使用して、どのような見せ方をするのか決めてください。使用したいスライドパターンがどれかわかるように最終出力のマークダウンにメモを追加しておいてください。
 6. 選択したスライドパターンを使うのに最適なスライド内容か慎重に確認してください。例えば、並列させる要素が2つならcompareやprocessを使用するべき。並列させる要素が3つならbulletCards、4つなら、cardsやheaderCardsを使用するべき。以上のように使用するパターンと内容で乖離がないか確認してください。
 7. 確認して、問題があれば、より適切なスライドパターン選択になるように、パターン選択やプレゼン内容を調整してください。
-8. 以上を踏まえて
+8. 以上を踏まえて、スライドごとのアウトラインをまとめる前に、各スライドの目的とキーとなる伝達要素を必ず明確化すること。
+9. bulletCards を利用する場合は、各カードを「タイトル: 説明」の形式で記述し、説明文を省略しないこと。説明がない場合でも短い補足を必ず追加すること。
 </指示詳細>
 
 
@@ -72,7 +73,17 @@ ${userInput}
 }
 
 function enhanceUserInput(userInput) {
-  const enhancerPrompt = getEnhansePrompt(userInput);
-  const enhanced = requestGemini(enhancerPrompt);
-  return enhanced
+  try {
+    const enhancerPrompt = getEnhansePrompt(userInput);
+    const enhanced = requestGemini(enhancerPrompt);
+    if (typeof enhanced === "string" && enhanced.trim()) {
+      return enhanced.trim();
+    }
+    console.log("[ENHANCE] 応答が空のため元の入力を利用します。");
+    return userInput;
+  } catch (error) {
+    console.error("[ENHANCE] エンハンス処理でエラーが発生したため元の入力を使用します:", error);
+    return userInput;
+  }
 }
+

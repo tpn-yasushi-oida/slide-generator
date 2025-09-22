@@ -336,13 +336,18 @@ function getSlideDataSchema() {
                   type: "array",
                   maxItems: 3,
                   items: {
-                    type: "object",
-                    additionalProperties: false,
-                    required: ["title", "desc"],
-                    properties: {
-                      title: { type: "string" },
-                      desc: { type: "string" }
-                    }
+                    oneOf: [
+                      {
+                        type: "object",
+                        additionalProperties: false,
+                        required: ["title"],
+                        properties: {
+                          title: { type: "string" },
+                          desc: { type: "string" }
+                        }
+                      },
+                      { type: "string" }
+                    ]
                   }
                 },
                 notes: { type: "string" }
