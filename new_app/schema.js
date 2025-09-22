@@ -346,7 +346,13 @@ function getSlideDataSchema() {
                           desc: { type: "string" }
                         }
                       },
-                      { type: "string" }
+                      { type: "string" },
+                      {
+                        type: "array",
+                        minItems: 1,
+                        maxItems: 2,
+                        items: { type: "string" }
+                      }
                     ]
                   }
                 },
@@ -427,3 +433,4 @@ function getSlideDataSchema() {
     }
   };
 }
+

@@ -1,4 +1,4 @@
-/** ===================== validation.js ===================== */
+﻿/** ===================== validation.js ===================== */
 
 /** 禁止記号・不要改行の除去、前後空白のトリム */
 function sanitizeText(s) {
@@ -361,12 +361,27 @@ function validateAndNormalizeSlideData(result) {
             if (!text) throw new Error(`bulletCards.items[${ii}] が不正`);
             return { title: text, desc: "" };
           }
+          if (Array.isArray(it)) {
+            const titleCandidate = it[0] != null ? stripJapanesePeriodEnd(sanitizeText(String(it[0]))) : "";
+            const descCandidate = it[1] != null ? stripJapanesePeriodEnd(sanitizeText(String(it[1]))) : "";
+            if (!titleCandidate) throw new Error(`bulletCards.items[${ii}] が不正`);
+            return { title: titleCandidate, desc: descCandidate };
+          }
           if (!it || typeof it !== "object") throw new Error(`bulletCards.items[${ii}] が不正`);
-          const titleValue = it.title ?? it.heading ?? it.label;
-          const descValue = it.desc ?? it.description ?? it.detail ?? "";
-          if (typeof titleValue !== "string") throw new Error(`bulletCards.items[${ii}].title が不正`);
-          const normalizedTitle = sanitizeText(titleValue);
-          const normalizedDesc = stripJapanesePeriodEnd(sanitizeText(descValue));
+          const titleValue = it.title ?? it.heading ?? it.label ?? it.name ?? it.topic ?? it.key ?? it.term;
+          const descValue = it.desc ?? it.description ?? it.detail ?? it.body ?? it.text ?? it.summary ?? "";
+          let normalizedTitle = "";
+          if (typeof titleValue === "string") {
+            normalizedTitle = sanitizeText(titleValue);
+          } else if (titleValue != null) {
+            normalizedTitle = sanitizeText(String(titleValue));
+          }
+          if (!normalizedTitle) {
+            const fallback = stripJapanesePeriodEnd(sanitizeText(JSON.stringify(it)));
+            if (!fallback) throw new Error(`bulletCards.items[${ii}] が不正`);
+            normalizedTitle = fallback;
+          }
+          const normalizedDesc = descValue != null ? stripJapanesePeriodEnd(sanitizeText(String(descValue))) : "";
           return {
             title: normalizedTitle,
             desc: normalizedDesc
