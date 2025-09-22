@@ -40,7 +40,7 @@ function getAccessToken() {
  * - generationConfig に responseMimeType と responseSchema を設定
  * - レスポンスは candidates[0].content.parts[0].text にJSON文字列で入る想定
  */
-function requestGemini(prompt) {
+function requestGeminiWithSchema(prompt) {
   const token = getAccessToken();
   const geminiEndpoint =
     `https://${REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}`
@@ -115,7 +115,7 @@ function testGeminiAPI() {
     }
 
     const testInput = "AIについて簡潔なプレゼン。背景・メリット・展望。全体3〜5枚で。";
-    const res = requestGemini(testInput);
+    const res = requestGeminiWithSchema(testInput);
 
     if (!res || !Array.isArray(res.slideData) || !res.slideData.length) {
       console.log("警告: slideData が不正または空");
@@ -129,4 +129,46 @@ function testGeminiAPI() {
     console.log("致命的エラー: " + e.message);
     return false;
   }
+}
+
+function requestGemini(prompt) {
+  const token = getAccessToken();
+  const geminiEndpoint = `https://${REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/publishers/google/models/${GEMINI_MODEL}:streamGenerateContent`;
+  // const model =
+
+  const requestBody = {
+    contents: {
+      role: "user",
+      parts: [
+        {
+          text: prompt,
+        },
+      ],
+    },
+  };
+
+  const response = UrlFetchApp.fetch(geminiEndpoint, {
+    method: "post",
+    contentType: "application/json",
+    headers: {
+      Authorization: "Bearer " + token,
+    },
+    payload: JSON.stringify(requestBody),
+  });
+
+  // responseは文字列形式なので、JSONとしてパースする
+  const jsonResponse = JSON.parse(response.getContentText());
+
+  let generatedText = "";
+
+  // JSONからテキストを抽出して結合
+  jsonResponse.forEach(function (item) {
+    item.candidates.forEach(function (candidate) {
+      candidate.content.parts.forEach(function (part) {
+        generatedText += part.text;
+      });
+    });
+  });
+
+  return generatedText;
 }

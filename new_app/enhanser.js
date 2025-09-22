@@ -1,4 +1,4 @@
-function EnhanseUserInput(userInput) {
+function getEnhansePrompt(userInput) {
   return `
 <目的>
 <raw>…</raw>内の非構造テキストを、より効果的なプレゼンテーション構造へ変換する。  
@@ -69,4 +69,10 @@ function EnhanseUserInput(userInput) {
 ${userInput}
 </raw>
 `;
+}
+
+function enhanceUserInput(userInput) {
+  const enhancerPrompt = getEnhansePrompt(userInput);
+  const enhanced = requestGemini(enhancerPrompt);
+  return enhanced
 }
