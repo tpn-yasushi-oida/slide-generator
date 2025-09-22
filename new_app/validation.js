@@ -18,6 +18,42 @@ function stripJapanesePeriodEnd(s) {
   return s.replace(/。$/u, "");
 }
 
+
+/** 正規化用の共通ヘルパー */
+function sanitizeCell(value) {
+  return sanitizeText(String(value ?? ""));
+}
+
+function canonicalKey(value) {
+  return sanitizeCell(value).toLowerCase().replace(/[\s_]/g, "");
+}
+
+function pickTableValue(row, header, index) {
+  if (!row || typeof row !== "object") return "";
+  if (Object.prototype.hasOwnProperty.call(row, header)) return row[header];
+  const target = canonicalKey(header);
+  for (const key of Object.keys(row)) {
+    if (canonicalKey(key) === target) {
+      return row[key];
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(row, index)) return row[index];
+  if (Object.prototype.hasOwnProperty.call(row, String(index))) return row[String(index)];
+  return "";
+}
+
+function splitTableRowString(rowString, expectedLength) {
+  const raw = String(rowString || "")
+    .split(/[|｜,、	;／／]/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
+  const parts = new Array(expectedLength).fill("");
+  for (let i = 0; i < expectedLength; i++) {
+    parts[i] = raw[i] ? sanitizeText(raw[i]) : "";
+  }
+  return parts;
+}
+
 /** slideData検証と正規化 */
 function validateAndNormalizeSlideData(result) {
   if (!result || typeof result !== "object" || !Array.isArray(result.slideData)) {
@@ -44,10 +80,21 @@ function validateAndNormalizeSlideData(result) {
     switch (type) {
       case "title": {
         if (typeof slide.title !== "string") throw new Error("title.title が不正");
-        if (typeof slide.date !== "string" || !/^\d{4}\.\d{2}\.\d{2}$/.test(slide.date)) {
-          throw new Error("title.date の形式が不正 (YYYY.MM.DD)");
+        if (typeof slide.date !== "string") throw new Error("title.date が不正");
+        const rawDate = sanitizeCell(slide.date);
+        const dotDate = /^\d{4}\.\d{2}\.\d{2}$/;
+        const jpMatch = rawDate.match(/^(\d{4})年(\d{1,2})月(\d{1,2})日$/);
+        if (!dotDate.test(rawDate) && !jpMatch) {
+          throw new Error("title.date の形式が不正 (YYYY.MM.DD または YYYY年M月D日)");
+        }
+        if (jpMatch) {
+          const [, y, m, d] = jpMatch;
+          slide.date = `${y}年${String(m).padStart(2, "0")}月${String(d).padStart(2, "0")}日`;
+        } else {
+          slide.date = rawDate;
         }
         slide.title = sanitizeText(slide.title);
+        slide.date = sanitizeCell(slide.date);
         if (slide.notes) slide.notes = sanitizeText(slide.notes);
         break;
       }
@@ -222,10 +269,28 @@ function validateAndNormalizeSlideData(result) {
         if (!Array.isArray(slide.headers) || !Array.isArray(slide.rows)) {
           throw new Error("table.headers および table.rows は配列である必要があります");
         }
-        slide.headers = slide.headers.map((h) => sanitizeText(String(h)));
+        slide.headers = slide.headers.map((h) => sanitizeCell(h));
+        const headerCount = slide.headers.length;
         slide.rows = slide.rows.map((r, ri) => {
-          if (!Array.isArray(r)) throw new Error(`table.rows[${ri}] は配列である必要があります`);
-          return r.map((c) => sanitizeText(String(c)));
+          if (Array.isArray(r)) {
+            const result = new Array(headerCount).fill("");
+            for (let i = 0; i < headerCount; i++) {
+              result[i] = sanitizeCell(r[i]);
+            }
+            return result;
+          }
+          if (r && typeof r === "object") {
+            return slide.headers.map((header, hi) => sanitizeCell(pickTableValue(r, header, hi)));
+          }
+          if (typeof r === "string") {
+            const parts = splitTableRowString(r, headerCount);
+            const result = new Array(headerCount).fill("");
+            for (let i = 0; i < headerCount; i++) {
+              result[i] = sanitizeCell(parts[i]);
+            }
+            return result;
+          }
+          throw new Error(`table.rows[${ri}] が不正`);
         });
         if (slide.notes) slide.notes = sanitizeText(slide.notes);
         break;
@@ -305,14 +370,24 @@ function validateAndNormalizeSlideData(result) {
       case "faq": {
         if (typeof slide.title !== "string") throw new Error("faq.title が不正");
         slide.title = sanitizeText(slide.title);
-        if (slide.subhead) slide.subhead = sanitizeText(slide.subhead);
         if (!Array.isArray(slide.items)) throw new Error("faq.items は配列である必要があります");
+        if (slide.subhead) slide.subhead = sanitizeText(slide.subhead);
         slide.items = slide.items.map((it, ii) => {
-          if (!it || typeof it !== "object") throw new Error(`faq.items[${ii}] が不正`);
-          if (typeof it.q !== "string" || typeof it.a !== "string") {
-            throw new Error(`faq.items[${ii}] の q/a が不正`);
+          if (typeof it === "string") {
+            const text = sanitizeCell(it);
+            if (!text) throw new Error(`faq.items[${ii}] が不正`);
+            return { q: text, a: "" };
           }
-          return { q: sanitizeText(it.q), a: sanitizeText(it.a) };
+          if (!it || typeof it !== "object") throw new Error(`faq.items[${ii}] が不正`);
+          const qSource = it.q ?? it.question;
+          const aSource = it.a ?? it.answer ?? it.response ?? it.detail ?? "";
+          if (typeof qSource !== "string") {
+            throw new Error(`faq.items[${ii}] の質問文が不正`);
+          }
+          const item = { q: sanitizeCell(qSource), a: sanitizeCell(aSource) };
+          if (!item.a) item.a = "";
+          if (it.source != null) item.source = sanitizeCell(it.source);
+          return item;
         });
         if (slide.notes) slide.notes = sanitizeText(slide.notes);
         break;

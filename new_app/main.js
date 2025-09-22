@@ -7,7 +7,7 @@ function generateSlideData(userInput, options) {
     // オプションのデフォルト値設定と空欄処理
     const processedOptions = {
       primaryColor: options.primaryColor || "#145599",
-      footerText: options.footerText || "© TOPPAN Inc.",
+      footerText: options.footerText || undefined,
       fontFamily: options.fontFamily || "Arial",
       // 空欄の場合はnullを設定（画像を配置しない）
       headerLogoUrl: options.headerLogoUrl || null,

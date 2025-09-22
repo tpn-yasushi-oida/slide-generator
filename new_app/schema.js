@@ -20,7 +20,7 @@ function getSlideDataSchema() {
               properties: {
                 type: { type: "string", enum: ["title"] },
                 title: { type: "string" },
-                date: { type: "string", pattern: "^\\d{4}\\.\\d{2}\\.\\d{2}$" },
+                date: { type: "string", pattern: "^(?:\\d{4}\\.\\d{2}\\.\\d{2}|\\d{4}年\\d{1,2}月\\d{1,2}日)$" },
                 notes: { type: "string" }
               }
             },
@@ -200,7 +200,7 @@ function getSlideDataSchema() {
             {
               type: "object",
               additionalProperties: false,
-              required: ["type", "title", "items", "columns"],
+              required: ["type", "title", "items"],
               properties: {
                 type: { type: "string", enum: ["headerCards"] },
                 title: { type: "string" },
@@ -232,7 +232,29 @@ function getSlideDataSchema() {
                 title: { type: "string" },
                 subhead: { type: "string" },
                 headers: { type: "array", items: { type: "string" } },
-                rows: { type: "array", items: { type: "array", items: { type: "string" } } },
+                rows: {
+                  type: "array",
+                  items: {
+                    oneOf: [
+                      {
+                        type: "array",
+                        items: { type: "string" }
+                      },
+                      {
+                        type: "object",
+                        additionalProperties: {
+                          oneOf: [
+                            { type: "string" },
+                            { type: "number" },
+                            { type: "boolean" },
+                            { type: "null" }
+                          ]
+                        }
+                      },
+                      { type: "string" }
+                    ]
+                  }
+                },
                 notes: { type: "string" }
               }
             },
@@ -338,13 +360,29 @@ function getSlideDataSchema() {
                 items: {
                   type: "array",
                   items: {
-                    type: "object",
-                    additionalProperties: false,
-                    required: ["q", "a"],
-                    properties: {
-                      q: { type: "string" },
-                      a: { type: "string" }
-                    }
+                    oneOf: [
+                      {
+                        type: "object",
+                        additionalProperties: false,
+                        required: ["q", "a"],
+                        properties: {
+                          q: { type: "string" },
+                          a: { type: "string" },
+                          source: { type: "string" }
+                        }
+                      },
+                      {
+                        type: "object",
+                        additionalProperties: false,
+                        required: ["question", "answer"],
+                        properties: {
+                          question: { type: "string" },
+                          answer: { type: "string" },
+                          source: { type: "string" }
+                        }
+                      },
+                      { type: "string" }
+                    ]
                   }
                 },
                 notes: { type: "string" }
