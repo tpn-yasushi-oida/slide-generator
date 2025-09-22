@@ -1,8 +1,8 @@
 const mockOptions = {
-  primaryColor: '#ff0000',
+  primaryColor: '#145599',
   footerText: "© TOPPAN Inc.",
   headerLogoUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQaWj9IAldlS2r14RkWuKTyOvLs2csIH8rsxA&s",
-  closingLogoUrl: "https://i.ytimg.com/vi/u-N7jG6T7UA/maxresdefault.jpg",
+  closingLogoUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQaWj9IAldlS2r14RkWuKTyOvLs2csIH8rsxA&s",
   fontFamily: "Murecho"
 }
 
